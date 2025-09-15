@@ -202,7 +202,231 @@ const getProfile = async (req, res) => {
   }
 };
 
-// Validation rules
+const registerDepartmentUser = async (req, res) => {
+  try {
+    // Validate request
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
+    const { departmentId } = req.params;
+    const { name, email, password, departmentRole } = req.body;
+
+    // Validate that departmentRole is provided
+    if (!departmentRole || departmentRole.trim() === '') {
+      return res.status(400).json({ error: 'Department role is required' });
+    }
+
+    // Verify department exists and get company info
+    const department = await prisma.department.findUnique({
+      where: { id: departmentId },
+      include: {
+        company: true
+      }
+    });
+
+    if (!department) {
+      return res.status(404).json({ error: 'Department not found or signup link invalid' });
+    }
+
+    // Check if user already exists
+    const existingUser = await prisma.user.findUnique({
+      where: { email }
+    });
+
+    if (existingUser) {
+      return res.status(400).json({ error: 'User with this email already exists' });
+    }
+
+    // Hash password
+    const passwordHash = await bcrypt.hash(password, 12);
+
+    // Create user in the department
+    const user = await prisma.user.create({
+      data: {
+        name,
+        email,
+        passwordHash,
+        role: 'USER', // Always USER role for department signup
+        departmentRole: departmentRole?.trim() || null, // Custom role within department
+        companyId: department.companyId,
+        departmentId: department.id
+      },
+      include: {
+        company: true,
+        department: true
+      }
+    });
+
+    // Log activity
+    await prisma.activityLog.create({
+      data: {
+        action: 'USER_REGISTERED_VIA_DEPARTMENT_LINK',
+        metadata: {
+          userEmail: user.email,
+          departmentName: department.name,
+          companyName: department.company.name
+        },
+        userId: user.id,
+        companyId: user.companyId
+      }
+    });
+
+    // Generate token
+    const token = generateToken(user.id);
+
+    res.status(201).json({
+      message: 'Account created successfully',
+      token,
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        company: user.company,
+        department: user.department
+      }
+    });
+
+  } catch (error) {
+    console.error('Department user registration error:', error);
+    res.status(500).json({ error: 'Server error during registration' });
+  }
+};
+
+// Separate endpoint for department head registration
+const registerDepartmentHead = async (req, res) => {
+  try {
+    // Validate request
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
+    const { departmentId } = req.params;
+    const { name, email, password } = req.body;
+
+    // Verify department exists and get company info
+    const department = await prisma.department.findUnique({
+      where: { id: departmentId },
+      include: {
+        company: true,
+        users: {
+          where: { role: 'HEAD_OF_DEPARTMENT' }
+        }
+      }
+    });
+
+    if (!department) {
+      return res.status(404).json({ error: 'Department not found or signup link invalid' });
+    }
+
+    // Check if department already has a head
+    if (department.users.length > 0) {
+      return res.status(400).json({ error: 'Department already has a head assigned' });
+    }
+
+    // Check if user already exists
+    const existingUser = await prisma.user.findUnique({
+      where: { email }
+    });
+
+    if (existingUser) {
+      return res.status(400).json({ error: 'User with this email already exists' });
+    }
+
+    // Hash password
+    const salt = await bcrypt.genSalt(10);
+    const passwordHash = await bcrypt.hash(password, salt);
+
+    // Create user as department head
+    const user = await prisma.user.create({
+      data: {
+        name,
+        email,
+        passwordHash,
+        role: 'HEAD_OF_DEPARTMENT',
+        departmentRole: 'Head of Department', // Default role title for head
+        companyId: department.companyId,
+        departmentId: department.id
+      },
+      include: {
+        company: true,
+        department: true
+      }
+    });
+
+    // Log activity
+    await prisma.activityLog.create({
+      data: {
+        action: 'DEPARTMENT_HEAD_REGISTERED',
+        metadata: {
+          userEmail: user.email,
+          departmentName: department.name,
+          companyName: department.company.name
+        },
+        userId: user.id,
+        companyId: user.companyId
+      }
+    });
+
+    // Generate token
+    const token = generateToken(user.id);
+
+    res.status(201).json({
+      message: 'Department head account created successfully',
+      token,
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        company: user.company,
+        department: user.department
+      }
+    });
+
+  } catch (error) {
+    console.error('Department head registration error:', error);
+    res.status(500).json({ error: 'Server error during registration' });
+  }
+};
+
+const getDepartmentSignupInfo = async (req, res) => {
+  try {
+    const { departmentId } = req.params;
+
+    const department = await prisma.department.findUnique({
+      where: { id: departmentId },
+      include: {
+        company: {
+          select: {
+            id: true,
+            name: true
+          }
+        }
+      }
+    });
+
+    if (!department) {
+      return res.status(404).json({ error: 'Department not found' });
+    }
+
+    res.json({
+      department: {
+        id: department.id,
+        name: department.name,
+        company: department.company
+      }
+    });
+
+  } catch (error) {
+    console.error('Get department signup info error:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+};
+
 const registerValidation = [
   body('companyName').trim().isLength({ min: 2, max: 100 }).withMessage('Company name must be 2-100 characters'),
   body('companyEmail').isEmail().normalizeEmail().withMessage('Valid company email required'),
@@ -221,6 +445,9 @@ module.exports = {
   registerCompany,
   login,
   getProfile,
+  registerDepartmentUser,
+  registerDepartmentHead,
+  getDepartmentSignupInfo,
   registerValidation,
   loginValidation
 };

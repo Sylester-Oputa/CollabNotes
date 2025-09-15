@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
 
 // Create axios instance with base configuration
 const api = axios.create({
@@ -43,6 +43,9 @@ export const auth = {
   registerCompany: (data) => api.post('/auth/register-company', data),
   login: (data) => api.post('/auth/login', data),
   getProfile: () => api.get('/auth/profile'),
+  getDepartmentSignupInfo: (departmentId) => api.get(`/auth/department/${departmentId}/signup-info`),
+  registerDepartmentUser: (departmentId, data) => api.post(`/auth/department/${departmentId}/signup`, data),
+  registerDepartmentHead: (departmentId, data) => api.post(`/auth/department/${departmentId}/signup-head`, data),
 };
 
 // Company API calls
@@ -53,10 +56,17 @@ export const companies = {
 
 // Department API calls
 export const departments = {
+  getAll: () => api.get('/departments'),
   getCompanyDepartments: (companyId) => api.get(`/departments/company/${companyId}`),
   getDepartment: (id) => api.get(`/departments/${id}`),
+  create: (data) => api.post('/departments', data),
+  delete: (id) => api.delete(`/departments/${id}`),
   addUser: (departmentId, data) => api.post(`/departments/${departmentId}/users`, data),
+  removeUser: (departmentId, userId) => api.delete(`/departments/${departmentId}/users/${userId}`),
+  requestUserRemoval: (departmentId, userId, data) => api.post(`/departments/${departmentId}/users/${userId}/request-removal`, data),
   assignAdmin: (departmentId, data) => api.patch(`/departments/${departmentId}/admin`, data),
+  assignHead: (departmentId, data) => api.patch(`/departments/${departmentId}/head`, data),
+  removeHead: (departmentId, data) => api.patch(`/departments/${departmentId}/remove-head`, data),
 };
 
 // Notes API calls

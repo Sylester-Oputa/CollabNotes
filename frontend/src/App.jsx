@@ -1,5 +1,6 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { Toaster } from 'react-hot-toast';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import ProtectedRoute from './components/layout/ProtectedRoute';
 import Layout from './components/layout/Layout';
@@ -7,6 +8,14 @@ import Layout from './components/layout/Layout';
 // Pages
 import Login from './pages/Login';
 import Register from './pages/Register';
+import DepartmentSignup from './components/auth/DepartmentSignup';
+import DepartmentHeadSignup from './components/auth/DepartmentHeadSignup';
+import DepartmentManagement from './components/company/DepartmentManagement';
+import DepartmentDashboard from './components/department/DepartmentDashboard';
+import NotesManager from './components/department/NotesManager';
+import NoteEditor from './components/department/NoteEditor';
+import TasksBoard from './components/department/TasksBoard';
+import DepartmentHeadManagement from './components/department/DepartmentHeadManagement';
 
 // Create a simple placeholder for missing pages
 const PlaceholderPage = ({ title }) => (
@@ -32,6 +41,14 @@ const AppRoutes = () => {
         path="/register" 
         element={isAuthenticated ? <Navigate to="/" replace /> : <Register />} 
       />
+      <Route 
+        path="/department/:departmentId/signup" 
+        element={isAuthenticated ? <Navigate to="/" replace /> : <DepartmentSignup />} 
+      />
+      <Route 
+        path="/department/:departmentId/signup-head" 
+        element={isAuthenticated ? <Navigate to="/" replace /> : <DepartmentHeadSignup />} 
+      />
       
       {/* Protected routes */}
       <Route path="/" element={
@@ -40,33 +57,57 @@ const AppRoutes = () => {
         </ProtectedRoute>
       } />
       
+      <Route path="/dashboard" element={
+        <ProtectedRoute>
+          <Navigate to={user?.role === 'SUPER_ADMIN' ? '/company' : `/department/${user?.department?.id}`} replace />
+        </ProtectedRoute>
+      } />
+      
       <Route path="/company" element={
         <ProtectedRoute>
-          <PlaceholderPage title="Company Dashboard" />
+          <Layout>
+            <DepartmentManagement />
+          </Layout>
         </ProtectedRoute>
       } />
       
       <Route path="/department/:id" element={
         <ProtectedRoute>
-          <PlaceholderPage title="Department Dashboard" />
+          <Layout>
+            <DepartmentDashboard />
+          </Layout>
         </ProtectedRoute>
       } />
       
       <Route path="/department/:id/notes" element={
         <ProtectedRoute>
-          <PlaceholderPage title="Notes" />
+          <Layout>
+            <NotesManager />
+          </Layout>
         </ProtectedRoute>
       } />
       
       <Route path="/department/:id/notes/:noteId" element={
         <ProtectedRoute>
-          <PlaceholderPage title="Note Editor" />
+          <Layout>
+            <NoteEditor />
+          </Layout>
         </ProtectedRoute>
       } />
       
       <Route path="/department/:id/tasks" element={
         <ProtectedRoute>
-          <PlaceholderPage title="Tasks Board" />
+          <Layout>
+            <TasksBoard />
+          </Layout>
+        </ProtectedRoute>
+      } />
+      
+      <Route path="/department/:id/manage" element={
+        <ProtectedRoute>
+          <Layout>
+            <DepartmentHeadManagement />
+          </Layout>
         </ProtectedRoute>
       } />
       
@@ -101,6 +142,28 @@ function App() {
       <Router>
         <div className="App">
           <AppRoutes />
+          <Toaster
+            position="top-right"
+            toastOptions={{
+              duration: 4000,
+              style: {
+                background: '#363636',
+                color: '#fff',
+              },
+              success: {
+                duration: 3000,
+                theme: {
+                  primary: '#4aed88',
+                },
+              },
+              error: {
+                duration: 5000,
+                theme: {
+                  primary: '#f56565',
+                },
+              },
+            }}
+          />
         </div>
       </Router>
     </AuthProvider>

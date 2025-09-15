@@ -67,7 +67,7 @@ const requireDepartmentAccess = async (req, res, next) => {
       return res.status(401).json({ error: 'Authentication required' });
     }
 
-    const departmentId = req.params.departmentId || req.body.departmentId;
+  const departmentId = req.params.departmentId || req.body.departmentId || req.params.id;
     
     if (!departmentId) {
       return next();
