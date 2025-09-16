@@ -4,6 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import Card from '../ui/Card';
 import Button from '../ui/Button';
 import Input from '../ui/Input';
+import { ConfirmModal } from '../ui/Modal';
 import { departments as departmentsAPI } from '../../utils/api';
 import toast from 'react-hot-toast';
 
@@ -17,6 +18,7 @@ const DepartmentHeadManagement = () => {
   const [selectedUser, setSelectedUser] = useState(null);
   const [removalReason, setRemovalReason] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [removeUserModal, setRemoveUserModal] = useState({ isOpen: false, user: null });
 
   useEffect(() => {
     if (departmentId) {
@@ -66,15 +68,19 @@ const DepartmentHeadManagement = () => {
     }
   };
 
-  const handleDirectRemoval = async (userId, userName) => {
-    if (!window.confirm(`Are you sure you want to remove "${userName}" from this department? This action cannot be undone.`)) {
-      return;
-    }
+  const handleDirectRemoval = (userId, userName) => {
+    setRemoveUserModal({ 
+      isOpen: true, 
+      user: { id: userId, name: userName } 
+    });
+  };
 
+  const confirmRemoveUser = async () => {
     try {
-      await departmentsAPI.removeUser(departmentId, userId);
-      toast.success(`${userName} has been removed from the department`);
+      await departmentsAPI.removeUser(departmentId, removeUserModal.user.id);
+      toast.success(`${removeUserModal.user.name} has been removed from the department`);
       fetchDepartmentDetails(); // Refresh data
+      setRemoveUserModal({ isOpen: false, user: null });
     } catch (error) {
       const errorMessage = error.response?.data?.error || 'Failed to remove user';
       toast.error(errorMessage);
@@ -294,6 +300,16 @@ const DepartmentHeadManagement = () => {
           </div>
         </Card.Content>
       </Card>
+
+      <ConfirmModal
+        isOpen={removeUserModal.isOpen}
+        onClose={() => setRemoveUserModal({ isOpen: false, user: null })}
+        onConfirm={confirmRemoveUser}
+        title="Remove User"
+        message={`Are you sure you want to remove "${removeUserModal.user?.name}" from this department? This action cannot be undone.`}
+        confirmText="Remove"
+        confirmVariant="danger"
+      />
     </div>
   );
 };

@@ -4,6 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import Card from '../ui/Card';
 import Button from '../ui/Button';
 import Input from '../ui/Input';
+import { ConfirmModal } from '../ui/Modal';
 import { notes as notesAPI, departments as departmentsAPI } from '../../utils/api';
 import toast from 'react-hot-toast';
 
@@ -19,6 +20,7 @@ const NotesManager = () => {
   const [creating, setCreating] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterBy, setFilterBy] = useState('all'); // all, my-notes, recent
+  const [deleteModal, setDeleteModal] = useState({ isOpen: false, note: null });
 
   useEffect(() => {
     if (companySlug && departmentSlug) {
@@ -75,14 +77,18 @@ const NotesManager = () => {
     }
   };
 
-  const handleDeleteNote = async (noteId, noteTitle) => {
-    if (!window.confirm(`Are you sure you want to delete "${noteTitle}"?`)) {
-      return;
-    }
+  const handleDeleteNote = (noteId, noteTitle) => {
+    setDeleteModal({ 
+      isOpen: true, 
+      note: { id: noteId, title: noteTitle } 
+    });
+  };
 
+  const confirmDeleteNote = async () => {
+    const { note } = deleteModal;
     try {
-      await notesAPI.deleteNote(noteId);
-      setNotes(prev => prev.filter(note => note.id !== noteId));
+      await notesAPI.deleteNote(note.id);
+      setNotes(prev => prev.filter(n => n.id !== note.id));
       toast.success('Note deleted successfully!');
     } catch (error) {
       console.error('Error deleting note:', error);
@@ -324,6 +330,17 @@ const NotesManager = () => {
           </div>
         </Card.Content>
       </Card>
+
+      {/* Delete Note Confirmation Modal */}
+      <ConfirmModal
+        isOpen={deleteModal.isOpen}
+        onClose={() => setDeleteModal({ isOpen: false, note: null })}
+        onConfirm={confirmDeleteNote}
+        title="Delete Note"
+        message={`Are you sure you want to delete "${deleteModal.note?.title}"?`}
+        confirmText="Delete"
+        variant="danger"
+      />
     </div>
   );
 };

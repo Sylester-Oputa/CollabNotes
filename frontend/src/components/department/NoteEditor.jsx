@@ -4,11 +4,12 @@ import { useAuth } from '../../context/AuthContext';
 import Card from '../ui/Card';
 import Button from '../ui/Button';
 import Input from '../ui/Input';
+import { ConfirmModal } from '../ui/Modal';
 import { notes as notesAPI } from '../../utils/api';
 import toast from 'react-hot-toast';
 
 const NoteEditor = () => {
-  const { id: departmentId, noteId } = useParams();
+  const { companySlug, departmentSlug, noteId } = useParams();
   const { user } = useAuth();
   const navigate = useNavigate();
   const [note, setNote] = useState(null);
@@ -17,6 +18,7 @@ const NoteEditor = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [editedNote, setEditedNote] = useState({ title: '', content: '' });
   const [lastSaved, setLastSaved] = useState(null);
+  const [deleteModal, setDeleteModal] = useState({ isOpen: false, note: null });
 
   useEffect(() => {
     if (noteId) {
@@ -74,15 +76,18 @@ const NoteEditor = () => {
     setIsEditing(false);
   };
 
-  const handleDelete = async () => {
-    if (!window.confirm(`Are you sure you want to delete "${note.title}"?`)) {
-      return;
-    }
+  const handleDelete = () => {
+    setDeleteModal({ 
+      isOpen: true, 
+      note: { id: noteId, title: note.title } 
+    });
+  };
 
+  const confirmDelete = async () => {
     try {
       await notesAPI.deleteNote(noteId);
       toast.success('Note deleted successfully!');
-      navigate(`/department/${departmentId}/notes`);
+      navigate(`/${companySlug}/${departmentSlug}/notes`);
     } catch (error) {
       console.error('Error deleting note:', error);
       toast.error('Failed to delete note');
@@ -285,6 +290,16 @@ const NoteEditor = () => {
           </div>
         </Card.Content>
       </Card>
+
+      <ConfirmModal
+        isOpen={deleteModal.isOpen}
+        onClose={() => setDeleteModal({ isOpen: false, note: null })}
+        onConfirm={confirmDelete}
+        title="Delete Note"
+        message={`Are you sure you want to delete "${deleteModal.note?.title}"?`}
+        confirmText="Delete"
+        confirmVariant="danger"
+      />
     </div>
   );
 };

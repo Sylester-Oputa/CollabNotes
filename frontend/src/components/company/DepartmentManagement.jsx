@@ -4,6 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import Card from '../ui/Card';
 import Button from '../ui/Button';
 import Input from '../ui/Input';
+import { ConfirmModal } from '../ui/Modal';
 import { departments as departmentsAPI } from '../../utils/api';
 
 const DepartmentManagement = () => {
@@ -15,6 +16,8 @@ const DepartmentManagement = () => {
   const [creating, setCreating] = useState(false);
   const [errors, setErrors] = useState({});
   const [copiedLinkId, setCopiedLinkId] = useState(null);
+  const [deleteModal, setDeleteModal] = useState({ isOpen: false, department: null });
+  const [removeUserModal, setRemoveUserModal] = useState({ isOpen: false, user: null, departmentId: null });
 
   useEffect(() => {
     fetchDepartments();
@@ -100,14 +103,18 @@ const DepartmentManagement = () => {
     }
   };
 
-  const handleDeleteDepartment = async (departmentId, departmentName) => {
-    if (!window.confirm(`Are you sure you want to delete the "${departmentName}" department? This action cannot be undone.`)) {
-      return;
-    }
+  const handleDeleteDepartment = (departmentId, departmentName) => {
+    setDeleteModal({ 
+      isOpen: true, 
+      department: { id: departmentId, name: departmentName } 
+    });
+  };
 
+  const confirmDeleteDepartment = async () => {
+    const { department } = deleteModal;
     try {
-      await departmentsAPI.delete(departmentId);
-      toast.success(`Department "${departmentName}" deleted successfully!`);
+      await departmentsAPI.delete(department.id);
+      toast.success(`Department "${department.name}" deleted successfully!`);
       // Refresh departments list
       fetchDepartments();
     } catch (error) {
@@ -116,14 +123,19 @@ const DepartmentManagement = () => {
     }
   };
 
-  const handleRemoveUser = async (departmentId, userId, userName) => {
-    if (!window.confirm(`Are you sure you want to remove "${userName}" from this department? This action cannot be undone.`)) {
-      return;
-    }
+  const handleRemoveUser = (departmentId, userId, userName) => {
+    setRemoveUserModal({ 
+      isOpen: true, 
+      user: { id: userId, name: userName }, 
+      departmentId 
+    });
+  };
 
+  const confirmRemoveUser = async () => {
+    const { user, departmentId } = removeUserModal;
     try {
-      await departmentsAPI.removeUser(departmentId, userId);
-      toast.success(`${userName} has been removed from the department`);
+      await departmentsAPI.removeUser(departmentId, user.id);
+      toast.success(`${user.name} has been removed from the department`);
       // Refresh departments list
       fetchDepartments();
     } catch (error) {
@@ -337,6 +349,28 @@ const DepartmentManagement = () => {
           ))
         )}
       </div>
+
+      {/* Delete Department Confirmation Modal */}
+      <ConfirmModal
+        isOpen={deleteModal.isOpen}
+        onClose={() => setDeleteModal({ isOpen: false, department: null })}
+        onConfirm={confirmDeleteDepartment}
+        title="Delete Department"
+        message={`Are you sure you want to delete the "${deleteModal.department?.name}" department? This action cannot be undone.`}
+        confirmText="Delete"
+        variant="danger"
+      />
+
+      {/* Remove User Confirmation Modal */}
+      <ConfirmModal
+        isOpen={removeUserModal.isOpen}
+        onClose={() => setRemoveUserModal({ isOpen: false, user: null, departmentId: null })}
+        onConfirm={confirmRemoveUser}
+        title="Remove User"
+        message={`Are you sure you want to remove "${removeUserModal.user?.name}" from this department? This action cannot be undone.`}
+        confirmText="Remove"
+        variant="danger"
+      />
     </div>
   );
 };

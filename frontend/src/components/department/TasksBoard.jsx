@@ -4,6 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import Card from '../ui/Card';
 import Button from '../ui/Button';
 import Input from '../ui/Input';
+import { ConfirmModal } from '../ui/Modal';
 import { tasks as tasksAPI, departments as departmentsAPI } from '../../utils/api';
 import toast from 'react-hot-toast';
 
@@ -23,6 +24,7 @@ const TasksBoard = () => {
     dueDate: ''
   });
   const [creating, setCreating] = useState(false);
+  const [deleteModal, setDeleteModal] = useState({ isOpen: false, task: null });
 
   const taskStatuses = [
     { key: 'TODO', label: 'To Do', color: 'bg-gray-100', textColor: 'text-gray-800' },
@@ -115,15 +117,19 @@ const TasksBoard = () => {
     }
   };
 
-  const handleDeleteTask = async (taskId, taskTitle) => {
-    if (!window.confirm(`Are you sure you want to delete "${taskTitle}"?`)) {
-      return;
-    }
+  const handleDeleteTask = (taskId, taskTitle) => {
+    setDeleteModal({ 
+      isOpen: true, 
+      task: { id: taskId, title: taskTitle } 
+    });
+  };
 
+  const confirmDeleteTask = async () => {
     try {
-      await tasksAPI.deleteTask(taskId);
-      setTasks(prev => prev.filter(task => task.id !== taskId));
+      await tasksAPI.deleteTask(deleteModal.task.id);
+      setTasks(prev => prev.filter(task => task.id !== deleteModal.task.id));
       toast.success('Task deleted successfully!');
+      setDeleteModal({ isOpen: false, task: null });
     } catch (error) {
       console.error('Error deleting task:', error);
       toast.error('Failed to delete task');
@@ -405,6 +411,16 @@ const TasksBoard = () => {
           </div>
         </Card.Content>
       </Card>
+
+      <ConfirmModal
+        isOpen={deleteModal.isOpen}
+        onClose={() => setDeleteModal({ isOpen: false, task: null })}
+        onConfirm={confirmDeleteTask}
+        title="Delete Task"
+        message={`Are you sure you want to delete "${deleteModal.task?.title}"?`}
+        confirmText="Delete"
+        confirmVariant="danger"
+      />
     </div>
   );
 };
