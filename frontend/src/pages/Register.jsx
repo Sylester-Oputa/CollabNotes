@@ -97,7 +97,7 @@ const Register = () => {
             Already have an account?{' '}
             <Link
               to="/login"
-              className="font-medium text-primary-600 hover:text-primary-500"
+              className="font-medium text-blue-600 hover:text-blue-500"
             >
               Sign in
             </Link>
@@ -196,11 +196,11 @@ const Register = () => {
         <div className="text-center">
           <p className="text-sm text-gray-600">
             By registering, you agree to our{' '}
-            <a href="#" className="font-medium text-primary-600 hover:text-primary-500">
+            <a href="#" className="font-medium text-blue-600 hover:text-blue-500">
               Terms of Service
             </a>{' '}
             and{' '}
-            <a href="#" className="font-medium text-primary-600 hover:text-primary-500">
+            <a href="#" className="font-medium text-blue-600 hover:text-blue-500">
               Privacy Policy
             </a>
           </p>

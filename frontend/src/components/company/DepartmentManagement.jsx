@@ -245,9 +245,9 @@ const DepartmentManagement = () => {
                     <h3 className="text-lg font-semibold text-gray-900">
                       {department.name}
                     </h3>
-                    <p className="text-sm text-gray-500 mt-1">
+                    {/* <p className="text-sm text-gray-500 mt-1">
                       Created: {new Date(department.createdAt).toLocaleDateString()}
-                    </p>
+                    </p> */}
                     <p className="text-sm text-gray-500">
                       Total Users: {department._count?.users || 0}
                     </p>

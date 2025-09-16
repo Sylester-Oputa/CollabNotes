@@ -73,7 +73,7 @@ const Login = () => {
             Or{' '}
             <Link
               to="/register"
-              className="font-medium text-primary-600 hover:text-primary-500"
+              className="font-medium text-blue-600 hover:text-blue-500"
             >
               register your company
             </Link>
@@ -128,7 +128,7 @@ const Login = () => {
             New to CollabNotes?{' '}
             <Link
               to="/register"
-              className="font-medium text-primary-600 hover:text-primary-500"
+              className="font-medium text-blue-600 hover:text-blue-500"
             >
               Start your free trial
             </Link>
