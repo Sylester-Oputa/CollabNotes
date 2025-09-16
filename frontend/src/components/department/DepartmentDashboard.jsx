@@ -7,7 +7,7 @@ import { departments as departmentsAPI } from '../../utils/api';
 import toast from 'react-hot-toast';
 
 const DepartmentDashboard = () => {
-  const { id: departmentId } = useParams();
+  const { companySlug, departmentSlug } = useParams();
   const { user } = useAuth();
   const navigate = useNavigate();
   const [department, setDepartment] = useState(null);
@@ -20,14 +20,14 @@ const DepartmentDashboard = () => {
   });
 
   useEffect(() => {
-    if (departmentId) {
+    if (companySlug && departmentSlug) {
       fetchDepartmentDetails();
     }
-  }, [departmentId]);
+  }, [companySlug, departmentSlug]);
 
   const fetchDepartmentDetails = async () => {
     try {
-      const response = await departmentsAPI.getDepartment(departmentId);
+      const response = await departmentsAPI.getDepartmentBySlug(companySlug, departmentSlug);
       setDepartment(response.data.department);
       
       // Mock stats for now - will be replaced with real data
@@ -178,7 +178,7 @@ const DepartmentDashboard = () => {
               Create, edit, and share notes with your team. Real-time collaboration and rich text editing.
             </p>
             <Button
-              onClick={() => navigate(`/department/${departmentId}/notes`)}
+              onClick={() => navigate(`/${companySlug}/${departmentSlug}/notes`)}
               className="w-full bg-blue-600 hover:bg-blue-700"
             >
               View Notes
@@ -196,7 +196,7 @@ const DepartmentDashboard = () => {
               Organize tasks with Kanban boards. Assign, prioritize, and track progress with your team.
             </p>
             <Button
-              onClick={() => navigate(`/department/${departmentId}/tasks`)}
+              onClick={() => navigate(`/${companySlug}/${departmentSlug}/tasks`)}
               className="w-full bg-green-600 hover:bg-green-700"
             >
               View Tasks
@@ -215,7 +215,7 @@ const DepartmentDashboard = () => {
                 {isHead ? 'Request member removal and manage your team.' : 'Manage department members and approve requests.'}
               </p>
               <Button
-                onClick={() => navigate(`/department/${departmentId}/manage`)}
+                onClick={() => navigate(`/${companySlug}/${departmentSlug}/manage`)}
                 className="w-full bg-purple-600 hover:bg-purple-700"
               >
                 Manage Team

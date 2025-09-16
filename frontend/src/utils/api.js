@@ -44,8 +44,11 @@ export const auth = {
   login: (data) => api.post('/auth/login', data),
   getProfile: () => api.get('/auth/profile'),
   getDepartmentSignupInfo: (departmentId) => api.get(`/auth/department/${departmentId}/signup-info`),
+  getDepartmentSignupInfoBySlug: (companySlug, departmentSlug) => api.get(`/auth/company/${companySlug}/department/${departmentSlug}/signup-info`),
   registerDepartmentUser: (departmentId, data) => api.post(`/auth/department/${departmentId}/signup`, data),
+  registerDepartmentUserBySlug: (companySlug, departmentSlug, data) => api.post(`/auth/company/${companySlug}/department/${departmentSlug}/signup`, data),
   registerDepartmentHead: (departmentId, data) => api.post(`/auth/department/${departmentId}/signup-head`, data),
+  registerDepartmentHeadBySlug: (companySlug, departmentSlug, data) => api.post(`/auth/company/${companySlug}/department/${departmentSlug}/signup-head`, data),
 };
 
 // Company API calls
@@ -59,6 +62,7 @@ export const departments = {
   getAll: () => api.get('/departments'),
   getCompanyDepartments: (companyId) => api.get(`/departments/company/${companyId}`),
   getDepartment: (id) => api.get(`/departments/${id}`),
+  getDepartmentBySlug: (companySlug, departmentSlug) => api.get(`/companies/slug/${companySlug}/${departmentSlug}`),
   create: (data) => api.post('/departments', data),
   delete: (id) => api.delete(`/departments/${id}`),
   addUser: (departmentId, data) => api.post(`/departments/${departmentId}/users`, data),
@@ -72,6 +76,7 @@ export const departments = {
 // Notes API calls
 export const notes = {
   getDepartmentNotes: (departmentId, params) => api.get(`/notes/department/${departmentId}`, { params }),
+  getDepartmentNotesBySlug: (companySlug, departmentSlug, params) => api.get(`/notes/company/${companySlug}/department/${departmentSlug}`, { params }),
   getNote: (id) => api.get(`/notes/${id}`),
   createNote: (data) => api.post('/notes', data),
   updateNote: (id, data) => api.put(`/notes/${id}`, data),
@@ -81,6 +86,7 @@ export const notes = {
 // Tasks API calls
 export const tasks = {
   getDepartmentTasks: (departmentId, params) => api.get(`/tasks/department/${departmentId}`, { params }),
+  getDepartmentTasksBySlug: (companySlug, departmentSlug, params) => api.get(`/tasks/company/${companySlug}/department/${departmentSlug}`, { params }),
   getTask: (id) => api.get(`/tasks/${id}`),
   createTask: (data) => api.post('/tasks', data),
   updateTask: (id, data) => api.put(`/tasks/${id}`, data),

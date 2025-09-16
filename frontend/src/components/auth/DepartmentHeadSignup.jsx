@@ -4,7 +4,7 @@ import toast from 'react-hot-toast';
 import { auth } from '../../utils/api';
 
 const DepartmentHeadSignup = () => {
-  const { departmentId } = useParams();
+  const { companySlug, departmentSlug } = useParams();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [departmentInfo, setDepartmentInfo] = useState(null);
@@ -18,11 +18,11 @@ const DepartmentHeadSignup = () => {
 
   useEffect(() => {
     fetchDepartmentInfo();
-  }, [departmentId]);
+  }, [companySlug, departmentSlug]);
 
   const fetchDepartmentInfo = async () => {
     try {
-      const response = await auth.getDepartmentSignupInfo(departmentId);
+      const response = await auth.getDepartmentSignupInfoBySlug(companySlug, departmentSlug);
       setDepartmentInfo(response.data);
     } catch (error) {
       console.error('Error fetching department info:', error);
@@ -84,7 +84,7 @@ const DepartmentHeadSignup = () => {
 
     setLoading(true);
     try {
-      const response = await auth.registerDepartmentHead(departmentId, {
+      const response = await auth.registerDepartmentHeadBySlug(companySlug, departmentSlug, {
         name: formData.name,
         email: formData.email,
         password: formData.password

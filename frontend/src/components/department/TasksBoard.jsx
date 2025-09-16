@@ -8,7 +8,7 @@ import { tasks as tasksAPI, departments as departmentsAPI } from '../../utils/ap
 import toast from 'react-hot-toast';
 
 const TasksBoard = () => {
-  const { id: departmentId } = useParams();
+  const { companySlug, departmentSlug } = useParams();
   const { user } = useAuth();
   const navigate = useNavigate();
   const [department, setDepartment] = useState(null);
@@ -38,15 +38,15 @@ const TasksBoard = () => {
   };
 
   useEffect(() => {
-    if (departmentId) {
+    if (companySlug && departmentSlug) {
       fetchDepartmentDetails();
       fetchTasks();
     }
-  }, [departmentId]);
+  }, [companySlug, departmentSlug]);
 
   const fetchDepartmentDetails = async () => {
     try {
-      const response = await departmentsAPI.getDepartment(departmentId);
+      const response = await departmentsAPI.getDepartmentBySlug(companySlug, departmentSlug);
       setDepartment(response.data.department);
     } catch (error) {
       console.error('Error fetching department:', error);
@@ -55,8 +55,8 @@ const TasksBoard = () => {
 
   const fetchTasks = async () => {
     try {
-      const response = await tasksAPI.getDepartmentTasks(departmentId);
-      setTasks(response.data || []);
+      const response = await tasksAPI.getDepartmentTasksBySlug(companySlug, departmentSlug);
+      setTasks(response.data?.tasks || []);
     } catch (error) {
       console.error('Error fetching tasks:', error);
       toast.error('Failed to load tasks');
@@ -78,7 +78,7 @@ const TasksBoard = () => {
         title: newTask.title.trim(),
         description: newTask.description.trim(),
         priority: newTask.priority,
-        departmentId,
+        departmentId: department.id,
         ...(newTask.assignedToId && { assignedToId: newTask.assignedToId }),
         ...(newTask.dueDate && { dueDate: new Date(newTask.dueDate).toISOString() })
       };
@@ -131,7 +131,7 @@ const TasksBoard = () => {
   };
 
   const getTasksByStatus = (status) => {
-    return tasks.filter(task => task.status === status);
+    return Array.isArray(tasks) ? tasks.filter(task => task.status === status) : [];
   };
 
   const isHead = user?.role === 'HEAD_OF_DEPARTMENT';
@@ -152,7 +152,7 @@ const TasksBoard = () => {
         <div>
           <div className="flex items-center space-x-2">
             <Button
-              onClick={() => navigate(`/department/${departmentId}`)}
+              onClick={() => navigate(`/${companySlug}/${departmentSlug}`)}
               variant="secondary"
               className="text-sm"
             >

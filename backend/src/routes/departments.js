@@ -81,9 +81,14 @@ router.post('/',
         return res.status(400).json({ error: 'Department with this name already exists' });
       }
 
+
+      // Helper to generate slug from department name
+      const generateSlug = (name) => name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+
       const department = await prisma.department.create({
         data: {
           name: name.trim(),
+          slug: generateSlug(name),
           companyId: req.user.companyId
         },
         include: {
@@ -163,6 +168,11 @@ router.get('/:id',
   async (req, res) => {
     try {
       const { id } = req.params;
+      console.log('Get department request:', { 
+        departmentId: id, 
+        userId: req.user?.id, 
+        userRole: req.user?.role 
+      });
 
       const department = await prisma.department.findUnique({
         where: { id },
@@ -192,9 +202,11 @@ router.get('/:id',
       });
 
       if (!department) {
+        console.log('Department not found:', id);
         return res.status(404).json({ error: 'Department not found' });
       }
 
+      console.log('Department found successfully');
       res.json({ department });
 
     } catch (error) {

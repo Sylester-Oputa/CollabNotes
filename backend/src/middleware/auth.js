@@ -7,10 +7,13 @@ const authenticateToken = async (req, res, next) => {
     const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
 
     if (!token) {
+      console.log('No token provided');
       return res.status(401).json({ error: 'Access token required' });
     }
 
+    console.log('Token received, verifying...');
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    console.log('Token decoded:', { userId: decoded.userId });
     
     // Fetch user with company and department details
     const user = await prisma.user.findUnique({
@@ -22,13 +25,19 @@ const authenticateToken = async (req, res, next) => {
     });
 
     if (!user) {
+      console.log('User not found for token:', decoded.userId);
       return res.status(401).json({ error: 'Invalid token' });
     }
 
+    console.log('User authenticated:', { 
+      userId: user.id, 
+      userRole: user.role, 
+      userEmail: user.email 
+    });
     req.user = user;
     next();
   } catch (error) {
-    console.error('Auth middleware error:', error);
+    console.error('Auth middleware error:', error.message);
     return res.status(403).json({ error: 'Invalid or expired token' });
   }
 };
@@ -64,12 +73,20 @@ const requireSameCompany = (req, res, next) => {
 const requireDepartmentAccess = async (req, res, next) => {
   try {
     if (!req.user) {
+      console.log('Department access: No user in request');
       return res.status(401).json({ error: 'Authentication required' });
     }
 
-  const departmentId = req.params.departmentId || req.body.departmentId || req.params.id;
+    const departmentId = req.params.departmentId || req.body.departmentId || req.params.id;
+    console.log('Department access check:', { 
+      departmentId, 
+      userRole: req.user.role, 
+      userDepartmentId: req.user.departmentId,
+      userCompanyId: req.user.companyId 
+    });
     
     if (!departmentId) {
+      console.log('No departmentId, skipping check');
       return next();
     }
 
@@ -79,18 +96,31 @@ const requireDepartmentAccess = async (req, res, next) => {
         where: { id: departmentId }
       });
 
+      console.log('Super admin access check:', { department, departmentId });
+
       if (!department || department.companyId !== req.user.companyId) {
+        console.log('Access denied for super admin:', { 
+          departmentExists: !!department, 
+          departmentCompanyId: department?.companyId,
+          userCompanyId: req.user.companyId 
+        });
         return res.status(403).json({ error: 'Access denied to this department' });
       }
 
+      console.log('Super admin access granted');
       return next();
     }
 
     // Department admins and users can only access their own department
     if (req.user.departmentId !== departmentId) {
+      console.log('Department access denied:', { 
+        userDepartmentId: req.user.departmentId, 
+        requestedDepartmentId: departmentId 
+      });
       return res.status(403).json({ error: 'Access denied to this department' });
     }
 
+    console.log('Department access granted');
     next();
   } catch (error) {
     console.error('Department access error:', error);

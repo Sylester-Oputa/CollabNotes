@@ -8,7 +8,7 @@ import { notes as notesAPI, departments as departmentsAPI } from '../../utils/ap
 import toast from 'react-hot-toast';
 
 const NotesManager = () => {
-  const { id: departmentId } = useParams();
+  const { companySlug, departmentSlug } = useParams();
   const { user } = useAuth();
   const navigate = useNavigate();
   const [department, setDepartment] = useState(null);
@@ -21,15 +21,15 @@ const NotesManager = () => {
   const [filterBy, setFilterBy] = useState('all'); // all, my-notes, recent
 
   useEffect(() => {
-    if (departmentId) {
+    if (companySlug && departmentSlug) {
       fetchDepartmentDetails();
       fetchNotes();
     }
-  }, [departmentId]);
+  }, [companySlug, departmentSlug]);
 
   const fetchDepartmentDetails = async () => {
     try {
-      const response = await departmentsAPI.getDepartment(departmentId);
+      const response = await departmentsAPI.getDepartmentBySlug(companySlug, departmentSlug);
       setDepartment(response.data.department);
     } catch (error) {
       console.error('Error fetching department:', error);
@@ -38,8 +38,8 @@ const NotesManager = () => {
 
   const fetchNotes = async () => {
     try {
-      const response = await notesAPI.getDepartmentNotes(departmentId);
-      setNotes(response.data || []);
+      const response = await notesAPI.getDepartmentNotesBySlug(companySlug, departmentSlug);
+      setNotes(response.data?.notes || []);
     } catch (error) {
       console.error('Error fetching notes:', error);
       toast.error('Failed to load notes');
@@ -60,7 +60,7 @@ const NotesManager = () => {
       const response = await notesAPI.createNote({
         title: newNote.title.trim(),
         content: newNote.content.trim(),
-        departmentId
+        departmentId: department.id
       });
 
       setNotes(prev => [response.data, ...prev]);
@@ -90,7 +90,7 @@ const NotesManager = () => {
     }
   };
 
-  const filteredNotes = notes.filter(note => {
+  const filteredNotes = Array.isArray(notes) ? notes.filter(note => {
     const matchesSearch = note.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          note.content.toLowerCase().includes(searchTerm.toLowerCase());
     
@@ -104,7 +104,7 @@ const NotesManager = () => {
       default:
         return matchesSearch;
     }
-  });
+  }) : [];
 
   const isHead = user?.role === 'HEAD_OF_DEPARTMENT';
   const canManage = isHead || user?.role === 'SUPER_ADMIN';
@@ -124,7 +124,7 @@ const NotesManager = () => {
         <div>
           <div className="flex items-center space-x-2">
             <Button
-              onClick={() => navigate(`/department/${departmentId}`)}
+              onClick={() => navigate(`/${companySlug}/${departmentSlug}`)}
               variant="secondary"
               className="text-sm"
             >
@@ -289,7 +289,7 @@ const NotesManager = () => {
                   </div>
                   <div className="flex items-center space-x-2 ml-4">
                     <Button
-                      onClick={() => navigate(`/department/${departmentId}/notes/${note.id}`)}
+                      onClick={() => navigate(`/${companySlug}/${departmentSlug}/notes/${note.id}`)}
                       variant="secondary"
                       className="text-sm"
                     >

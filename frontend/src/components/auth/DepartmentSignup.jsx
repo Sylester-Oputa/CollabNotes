@@ -7,7 +7,7 @@ import Input from "../ui/Input";
 import { auth } from "../../utils/api";
 
 const DepartmentSignup = () => {
-  const { departmentId } = useParams();
+  const { companySlug, departmentSlug } = useParams();
   const navigate = useNavigate();
   const [departmentInfo, setDepartmentInfo] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -23,11 +23,11 @@ const DepartmentSignup = () => {
 
   useEffect(() => {
     fetchDepartmentInfo();
-  }, [departmentId]);
+  }, [companySlug, departmentSlug]);
 
   const fetchDepartmentInfo = async () => {
     try {
-      const response = await auth.getDepartmentSignupInfo(departmentId);
+      const response = await auth.getDepartmentSignupInfoBySlug(companySlug, departmentSlug);
       setDepartmentInfo(response.data);
     } catch (error) {
       const errorMessage = error.response?.data?.error || "Invalid department signup link";
@@ -103,7 +103,7 @@ const DepartmentSignup = () => {
     setErrors({});
 
     try {
-      const response = await auth.registerDepartmentUser(departmentId, {
+      const response = await auth.registerDepartmentUserBySlug(companySlug, departmentSlug, {
         name: formData.name.trim(),
         email: formData.email.trim(),
         password: formData.password,

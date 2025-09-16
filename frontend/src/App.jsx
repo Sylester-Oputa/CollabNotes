@@ -42,24 +42,24 @@ const AppRoutes = () => {
         element={isAuthenticated ? <Navigate to="/" replace /> : <Register />} 
       />
       <Route 
-        path="/department/:departmentId/signup" 
+        path="/:companySlug/:departmentSlug/signup" 
         element={isAuthenticated ? <Navigate to="/" replace /> : <DepartmentSignup />} 
       />
       <Route 
-        path="/department/:departmentId/signup-head" 
+        path="/:companySlug/:departmentSlug/signup-head" 
         element={isAuthenticated ? <Navigate to="/" replace /> : <DepartmentHeadSignup />} 
       />
       
       {/* Protected routes */}
       <Route path="/" element={
         <ProtectedRoute>
-          <Navigate to={user?.role === 'SUPER_ADMIN' ? '/company' : `/department/${user?.department?.id}`} replace />
+          <Navigate to={user?.role === 'SUPER_ADMIN' ? '/company' : `/${user?.company?.slug}/${user?.department?.slug}`} replace />
         </ProtectedRoute>
       } />
       
       <Route path="/dashboard" element={
         <ProtectedRoute>
-          <Navigate to={user?.role === 'SUPER_ADMIN' ? '/company' : `/department/${user?.department?.id}`} replace />
+          <Navigate to={user?.role === 'SUPER_ADMIN' ? '/company' : `/${user?.company?.slug}/${user?.department?.slug}`} replace />
         </ProtectedRoute>
       } />
       
@@ -71,7 +71,7 @@ const AppRoutes = () => {
         </ProtectedRoute>
       } />
       
-      <Route path="/department/:id" element={
+      <Route path="/:companySlug/:departmentSlug" element={
         <ProtectedRoute>
           <Layout>
             <DepartmentDashboard />
@@ -79,7 +79,7 @@ const AppRoutes = () => {
         </ProtectedRoute>
       } />
       
-      <Route path="/department/:id/notes" element={
+      <Route path="/:companySlug/:departmentSlug/notes" element={
         <ProtectedRoute>
           <Layout>
             <NotesManager />
@@ -87,7 +87,7 @@ const AppRoutes = () => {
         </ProtectedRoute>
       } />
       
-      <Route path="/department/:id/notes/:noteId" element={
+      <Route path="/:companySlug/:departmentSlug/notes/:noteId" element={
         <ProtectedRoute>
           <Layout>
             <NoteEditor />
@@ -95,7 +95,7 @@ const AppRoutes = () => {
         </ProtectedRoute>
       } />
       
-      <Route path="/department/:id/tasks" element={
+      <Route path="/:companySlug/:departmentSlug/tasks" element={
         <ProtectedRoute>
           <Layout>
             <TasksBoard />
@@ -103,7 +103,7 @@ const AppRoutes = () => {
         </ProtectedRoute>
       } />
       
-      <Route path="/department/:id/manage" element={
+      <Route path="/:companySlug/:departmentSlug/manage" element={
         <ProtectedRoute>
           <Layout>
             <DepartmentHeadManagement />

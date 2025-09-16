@@ -19,18 +19,23 @@ const registerCompany = async (req, res) => {
 
     const { companyName, companyEmail, adminName, adminEmail, password } = req.body;
 
+
+    // Helper to generate slug from company name
+    const generateSlug = (name) => name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+
     // Check if company already exists
     const existingCompany = await prisma.company.findFirst({
       where: {
         OR: [
           { name: companyName },
-          { email: companyEmail }
+          { email: companyEmail },
+          { slug: generateSlug(companyName) }
         ]
       }
     });
 
     if (existingCompany) {
-      return res.status(400).json({ error: 'Company name or email already exists' });
+      return res.status(400).json({ error: 'Company name, email, or slug already exists' });
     }
 
     // Check if admin email already exists
@@ -51,7 +56,8 @@ const registerCompany = async (req, res) => {
       const company = await tx.company.create({
         data: {
           name: companyName,
-          email: companyEmail
+          email: companyEmail,
+          slug: generateSlug(companyName)
         }
       });
 
@@ -210,7 +216,7 @@ const registerDepartmentUser = async (req, res) => {
       return res.status(400).json({ errors: errors.array() });
     }
 
-    const { departmentId } = req.params;
+    const { departmentId, companySlug, departmentSlug } = req.params;
     const { name, email, password, departmentRole } = req.body;
 
     // Validate that departmentRole is provided
@@ -218,13 +224,32 @@ const registerDepartmentUser = async (req, res) => {
       return res.status(400).json({ error: 'Department role is required' });
     }
 
-    // Verify department exists and get company info
-    const department = await prisma.department.findUnique({
-      where: { id: departmentId },
-      include: {
-        company: true
-      }
-    });
+    let department;
+
+    if (companySlug && departmentSlug) {
+      // Slug-based lookup
+      department = await prisma.department.findFirst({
+        where: {
+          slug: departmentSlug,
+          company: {
+            slug: companySlug
+          }
+        },
+        include: {
+          company: true
+        }
+      });
+    } else if (departmentId) {
+      // ID-based lookup (backward compatibility)
+      department = await prisma.department.findUnique({
+        where: { id: departmentId },
+        include: {
+          company: true
+        }
+      });
+    } else {
+      return res.status(400).json({ error: 'Department identifier required' });
+    }
 
     if (!department) {
       return res.status(404).json({ error: 'Department not found or signup link invalid' });
@@ -304,19 +329,41 @@ const registerDepartmentHead = async (req, res) => {
       return res.status(400).json({ errors: errors.array() });
     }
 
-    const { departmentId } = req.params;
+    const { departmentId, companySlug, departmentSlug } = req.params;
     const { name, email, password } = req.body;
 
-    // Verify department exists and get company info
-    const department = await prisma.department.findUnique({
-      where: { id: departmentId },
-      include: {
-        company: true,
-        users: {
-          where: { role: 'HEAD_OF_DEPARTMENT' }
+    let department;
+
+    if (companySlug && departmentSlug) {
+      // Slug-based lookup
+      department = await prisma.department.findFirst({
+        where: {
+          slug: departmentSlug,
+          company: {
+            slug: companySlug
+          }
+        },
+        include: {
+          company: true,
+          users: {
+            where: { role: 'HEAD_OF_DEPARTMENT' }
+          }
         }
-      }
-    });
+      });
+    } else if (departmentId) {
+      // ID-based lookup (backward compatibility)
+      department = await prisma.department.findUnique({
+        where: { id: departmentId },
+        include: {
+          company: true,
+          users: {
+            where: { role: 'HEAD_OF_DEPARTMENT' }
+          }
+        }
+      });
+    } else {
+      return res.status(400).json({ error: 'Department identifier required' });
+    }
 
     if (!department) {
       return res.status(404).json({ error: 'Department not found or signup link invalid' });
@@ -395,19 +442,45 @@ const registerDepartmentHead = async (req, res) => {
 
 const getDepartmentSignupInfo = async (req, res) => {
   try {
-    const { departmentId } = req.params;
+    const { departmentId, companySlug, departmentSlug } = req.params;
+    let department;
 
-    const department = await prisma.department.findUnique({
-      where: { id: departmentId },
-      include: {
-        company: {
-          select: {
-            id: true,
-            name: true
+    if (companySlug && departmentSlug) {
+      // Slug-based lookup
+      department = await prisma.department.findFirst({
+        where: {
+          slug: departmentSlug,
+          company: {
+            slug: companySlug
+          }
+        },
+        include: {
+          company: {
+            select: {
+              id: true,
+              name: true,
+              slug: true
+            }
           }
         }
-      }
-    });
+      });
+    } else if (departmentId) {
+      // ID-based lookup (backward compatibility)
+      department = await prisma.department.findUnique({
+        where: { id: departmentId },
+        include: {
+          company: {
+            select: {
+              id: true,
+              name: true,
+              slug: true
+            }
+          }
+        }
+      });
+    } else {
+      return res.status(400).json({ error: 'Department identifier required' });
+    }
 
     if (!department) {
       return res.status(404).json({ error: 'Department not found' });
@@ -417,6 +490,7 @@ const getDepartmentSignupInfo = async (req, res) => {
       department: {
         id: department.id,
         name: department.name,
+        slug: department.slug,
         company: department.company
       }
     });

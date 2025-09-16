@@ -7,7 +7,101 @@ const {
   requireDepartmentAccess 
 } = require('../middleware/auth');
 
-// Get tasks for a department
+// Get tasks by company and department slugs (new slug-based route)
+router.get('/company/:companySlug/department/:departmentSlug', 
+  authenticateToken,
+  async (req, res) => {
+    try {
+      const { companySlug, departmentSlug } = req.params;
+      const { status, assignedTo, page = 1, limit = 20 } = req.query;
+      
+      console.log('Get tasks by slugs:', { companySlug, departmentSlug });
+
+      // Find department by slugs
+      const company = await prisma.company.findUnique({
+        where: { slug: companySlug }
+      });
+
+      if (!company || req.user.companyId !== company.id) {
+        return res.status(404).json({ error: 'Company not found' });
+      }
+
+      const department = await prisma.department.findFirst({
+        where: { 
+          slug: departmentSlug,
+          companyId: company.id
+        }
+      });
+
+      if (!department) {
+        return res.status(404).json({ error: 'Department not found' });
+      }
+
+      // Check department access
+      if (req.user.role !== 'SUPER_ADMIN' && req.user.departmentId !== department.id) {
+        return res.status(403).json({ error: 'Access denied to this department' });
+      }
+
+      const skip = (page - 1) * limit;
+      const take = parseInt(limit);
+
+      // Build filters
+      const filters = { departmentId: department.id };
+      if (status) filters.status = status;
+      if (assignedTo) filters.assignedTo = assignedTo;
+
+      // Get tasks
+      const tasks = await prisma.task.findMany({
+        where: filters,
+        include: {
+          creator: {
+            select: {
+              id: true,
+              name: true,
+              email: true
+            }
+          },
+          assignee: {
+            select: {
+              id: true,
+              name: true,
+              email: true
+            }
+          }
+        },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take
+      });
+
+      // Get total count for pagination
+      const total = await prisma.task.count({
+        where: filters
+      });
+
+      res.json({ 
+        tasks, 
+        pagination: {
+          page: parseInt(page),
+          limit: take,
+          total,
+          pages: Math.ceil(total / take)
+        },
+        department: { 
+          name: department.name, 
+          slug: department.slug,
+          company: { name: company.name, slug: company.slug }
+        }
+      });
+
+    } catch (error) {
+      console.error('Get tasks by slugs error:', error);
+      res.status(500).json({ error: 'Server error' });
+    }
+  }
+);
+
+// Get tasks for a department (existing ID-based route)
 router.get('/department/:departmentId', 
   authenticateToken, 
   requireDepartmentAccess, 

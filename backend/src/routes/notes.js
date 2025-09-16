@@ -7,7 +7,103 @@ const {
   requireDepartmentAccess 
 } = require('../middleware/auth');
 
-// Get notes for a department
+// Get notes by company and department slugs (new slug-based route)
+router.get('/company/:companySlug/department/:departmentSlug', 
+  authenticateToken,
+  async (req, res) => {
+    try {
+      const { companySlug, departmentSlug } = req.params;
+      const { page = 1, limit = 10, search } = req.query;
+      
+      console.log('Get notes by slugs:', { companySlug, departmentSlug });
+
+      // Find department by slugs
+      const company = await prisma.company.findUnique({
+        where: { slug: companySlug }
+      });
+
+      if (!company || req.user.companyId !== company.id) {
+        return res.status(404).json({ error: 'Company not found' });
+      }
+
+      const department = await prisma.department.findFirst({
+        where: { 
+          slug: departmentSlug,
+          companyId: company.id
+        }
+      });
+
+      if (!department) {
+        return res.status(404).json({ error: 'Department not found' });
+      }
+
+      // Check department access
+      if (req.user.role !== 'SUPER_ADMIN' && req.user.departmentId !== department.id) {
+        return res.status(403).json({ error: 'Access denied to this department' });
+      }
+
+      const skip = (page - 1) * limit;
+      const take = parseInt(limit);
+
+      // Build search filter
+      const searchFilter = search ? {
+        OR: [
+          { title: { contains: search, mode: 'insensitive' } },
+          { content: { contains: search, mode: 'insensitive' } }
+        ]
+      } : {};
+
+      // Get notes
+      const notes = await prisma.note.findMany({
+        where: { 
+          departmentId: department.id,
+          ...searchFilter
+        },
+        include: {
+          creator: {
+            select: {
+              id: true,
+              name: true,
+              email: true
+            }
+          }
+        },
+        orderBy: { updatedAt: 'desc' },
+        skip,
+        take
+      });
+
+      // Get total count for pagination
+      const total = await prisma.note.count({
+        where: { 
+          departmentId: department.id,
+          ...searchFilter
+        }
+      });
+
+      res.json({ 
+        notes, 
+        pagination: {
+          page: parseInt(page),
+          limit: take,
+          total,
+          pages: Math.ceil(total / take)
+        },
+        department: { 
+          name: department.name, 
+          slug: department.slug,
+          company: { name: company.name, slug: company.slug }
+        }
+      });
+
+    } catch (error) {
+      console.error('Get notes by slugs error:', error);
+      res.status(500).json({ error: 'Server error' });
+    }
+  }
+);
+
+// Get notes for a department (existing ID-based route)
 router.get('/department/:departmentId', 
   authenticateToken, 
   requireDepartmentAccess, 

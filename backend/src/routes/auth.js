@@ -22,6 +22,11 @@ router.get('/department/:departmentId/signup-info', getDepartmentSignupInfo);
 router.post('/department/:departmentId/signup', registerDepartmentUser);
 router.post('/department/:departmentId/signup-head', registerDepartmentHead);
 
+// Slug-based department signup routes
+router.get('/company/:companySlug/department/:departmentSlug/signup-info', getDepartmentSignupInfo);
+router.post('/company/:companySlug/department/:departmentSlug/signup', registerDepartmentUser);
+router.post('/company/:companySlug/department/:departmentSlug/signup-head', registerDepartmentHead);
+
 // Protected routes
 router.get('/profile', authenticateToken, getProfile);
 
