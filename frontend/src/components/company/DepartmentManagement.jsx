@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Link, useParams, useLocation } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useAuth } from '../../context/AuthContext';
 import Card from '../ui/Card';
@@ -9,6 +10,10 @@ import { departments as departmentsAPI } from '../../utils/api';
 
 const DepartmentManagement = () => {
   const { user } = useAuth();
+  const { companySlug: companySlugParam } = useParams();
+  const location = useLocation();
+  const companySlugFromPath = location?.pathname?.split('/')?.[1] || null;
+  const companySlug = companySlugParam || user?.company?.slug || companySlugFromPath;
   const [departments, setDepartments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -65,12 +70,16 @@ const DepartmentManagement = () => {
     }
   };
 
-  const copySignupLink = (departmentId, linkType = 'team') => {
+  const copySignupLink = (department, linkType = 'team') => {
+    if (!companySlug) {
+      toast.error('Company slug is not available yet. Please reload the page or try again.');
+      return;
+    }
     const signupLink = linkType === 'head' 
-      ? `${window.location.origin}/department/${departmentId}/signup-head`
-      : `${window.location.origin}/department/${departmentId}/signup`;
+      ? `${window.location.origin}/${companySlug}/${department.slug}/signup-head`
+      : `${window.location.origin}/${companySlug}/${department.slug}/signup`;
     navigator.clipboard.writeText(signupLink).then(() => {
-      setCopiedLinkId(`${departmentId}-${linkType}`);
+      setCopiedLinkId(`${department.id}-${linkType}`);
       setTimeout(() => setCopiedLinkId(null), 2000);
       const linkTypeText = linkType === 'head' ? 'Head signup link' : 'Team signup link';
       toast.success(`${linkTypeText} copied to clipboard!`);
@@ -144,10 +153,11 @@ const DepartmentManagement = () => {
     }
   };
 
-  const generateSignupLink = (departmentId, linkType = 'team') => {
+  const generateSignupLink = (department, linkType = 'team') => {
+    if (!companySlug) return '';
     return linkType === 'head' 
-      ? `${window.location.origin}/department/${departmentId}/signup-head`
-      : `${window.location.origin}/department/${departmentId}/signup`;
+      ? `${window.location.origin}/${companySlug}/${department.slug}/signup-head`
+      : `${window.location.origin}/${companySlug}/${department.slug}/signup`;
   };
 
   if (loading) {
@@ -160,6 +170,13 @@ const DepartmentManagement = () => {
 
   return (
     <div className="space-y-6">
+      {/* Breadcrumb */}
+      <div className="flex items-center text-sm text-gray-500">
+        <span className="font-medium text-gray-900">{user?.company?.name}</span>
+        <span className="mx-2">/</span>
+        <span>Department Management</span>
+      </div>
+
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold text-gray-900">Department Management</h2>
         <Button
@@ -242,9 +259,20 @@ const DepartmentManagement = () => {
               <Card.Content className="p-6">
                 <div className="flex justify-between items-start mb-4">
                   <div className="flex-1">
-                    <h3 className="text-lg font-semibold text-gray-900">
-                      {department.name}
-                    </h3>
+                    <div className="flex items-center gap-2 mb-2">
+                      <h3 className="text-lg font-semibold text-gray-900">
+                        {department.name}
+                      </h3>
+                      {companySlug && department.slug && (
+                        <Link
+                          to={`/${companySlug}/${department.slug}`}
+                          className="text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 px-2 py-1 rounded transition-colors"
+                          title="View Department"
+                        >
+                          📋 View
+                        </Link>
+                      )}
+                    </div>
                     {/* <p className="text-sm text-gray-500 mt-1">
                       Created: {new Date(department.createdAt).toLocaleDateString()}
                     </p> */}
@@ -254,22 +282,24 @@ const DepartmentManagement = () => {
                   </div>
                   <div className="flex gap-2">
                     <Button
-                      onClick={() => copySignupLink(department.id, 'head')}
+                      onClick={() => copySignupLink(department, 'head')}
                       className={`text-sm ${
                         copiedLinkId === `${department.id}-head`
                           ? 'bg-green-600 hover:bg-green-700'
                           : 'bg-purple-600 hover:bg-purple-700'
                       }`}
+                      disabled={!companySlug}
                     >
                       {copiedLinkId === `${department.id}-head` ? '✓ Copied!' : 'Copy Head Link'}
                     </Button>
                     <Button
-                      onClick={() => copySignupLink(department.id, 'team')}
+                      onClick={() => copySignupLink(department, 'team')}
                       className={`text-sm ${
                         copiedLinkId === `${department.id}-team`
                           ? 'bg-green-600 hover:bg-green-700'
                           : 'bg-blue-600 hover:bg-blue-700'
                       }`}
+                      disabled={!companySlug}
                     >
                       {copiedLinkId === `${department.id}-team` ? '✓ Copied!' : 'Copy Team Link'}
                     </Button>

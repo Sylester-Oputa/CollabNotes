@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { auth } from '../../utils/api';
 
 const DepartmentHeadSignup = () => {
   const { companySlug, departmentSlug } = useParams();
+  const location = useLocation();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [departmentInfo, setDepartmentInfo] = useState(null);
@@ -17,8 +18,22 @@ const DepartmentHeadSignup = () => {
   const [errors, setErrors] = useState({});
 
   useEffect(() => {
+    // Debug params on mount/update
+    // Helps identify when params are missing or mis-ordered
+    // eslint-disable-next-line no-console
+    console.debug('DepartmentHeadSignup params', { companySlug, departmentSlug, pathname: location.pathname });
+
+    // Treat literal "undefined" caught from malformed links the same as missing
+    if (!companySlug || !departmentSlug || companySlug === 'undefined' || departmentSlug === 'undefined') {
+      if (companySlug === 'undefined' || departmentSlug === 'undefined') {
+        // eslint-disable-next-line no-console
+        console.warn('Malformed signup URL with undefined slug(s):', { companySlug, departmentSlug });
+      }
+      setErrors({ general: 'This signup link is malformed. Please request a new link from your admin.' });
+      return; // don't call API; component will render invalid UI
+    }
     fetchDepartmentInfo();
-  }, [companySlug, departmentSlug]);
+  }, [companySlug, departmentSlug, location.pathname]);
 
   const fetchDepartmentInfo = async () => {
     try {
@@ -26,8 +41,8 @@ const DepartmentHeadSignup = () => {
       setDepartmentInfo(response.data);
     } catch (error) {
       console.error('Error fetching department info:', error);
-      toast.error('Invalid signup link');
-      navigate('/');
+      toast.error('Invalid or expired signup link');
+      navigate('/login');
     }
   };
 
@@ -92,6 +107,9 @@ const DepartmentHeadSignup = () => {
 
       // Store authentication token
       localStorage.setItem('token', response.data.token);
+      if (response.data.user) {
+        localStorage.setItem('user', JSON.stringify(response.data.user));
+      }
       
       toast.success('Department head account created successfully!');
       navigate('/dashboard');
@@ -104,6 +122,22 @@ const DepartmentHeadSignup = () => {
   };
 
   if (!departmentInfo) {
+    if (errors.general) {
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-gray-50">
+          <div className="bg-white p-6 rounded-lg shadow max-w-md text-center">
+            <h2 className="text-xl font-semibold text-red-600 mb-2">Invalid Link</h2>
+            <p className="text-gray-600 mb-4">{errors.general}</p>
+            <button
+              onClick={() => navigate('/login')}
+              className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700"
+            >
+              Go to Login
+            </button>
+          </div>
+        </div>
+      );
+    }
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
@@ -263,7 +297,7 @@ const DepartmentHeadSignup = () => {
 
             <div className="mt-3">
               <button
-                onClick={() => navigate(`/department/${departmentId}/signup`)}
+                onClick={() => navigate(`/${companySlug}/${departmentSlug}/signup`)}
                 className="w-full text-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
               >
                 Join as Team Member

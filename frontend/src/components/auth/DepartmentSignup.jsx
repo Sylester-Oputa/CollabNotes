@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import toast from 'react-hot-toast';
 import Card from "../ui/Card";
 import Button from "../ui/Button";
@@ -9,6 +9,7 @@ import { auth } from "../../utils/api";
 const DepartmentSignup = () => {
   const { companySlug, departmentSlug } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const [departmentInfo, setDepartmentInfo] = useState(null);
   const [loading, setLoading] = useState(true);
   const [formData, setFormData] = useState({
@@ -22,8 +23,15 @@ const DepartmentSignup = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
+    // eslint-disable-next-line no-console
+    console.debug('DepartmentSignup params', { companySlug, departmentSlug, pathname: location.pathname });
+    if (!companySlug || !departmentSlug || companySlug === 'undefined' || departmentSlug === 'undefined') {
+      setErrors({ general: 'This signup link is malformed. Please request a new link from your admin.' });
+      setLoading(false);
+      return;
+    }
     fetchDepartmentInfo();
-  }, [companySlug, departmentSlug]);
+  }, [companySlug, departmentSlug, location.pathname]);
 
   const fetchDepartmentInfo = async () => {
     try {
@@ -320,7 +328,7 @@ const DepartmentSignup = () => {
 
             <div className="mt-3">
               <button
-                onClick={() => navigate(`/department/${departmentId}/signup-head`)}
+                onClick={() => navigate(`/${companySlug}/${departmentSlug}/signup-head`)}
                 className="w-full text-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500"
               >
                 👑 Join as Department Head

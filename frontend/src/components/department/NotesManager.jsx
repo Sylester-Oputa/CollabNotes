@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import Card from '../ui/Card';
 import Button from '../ui/Button';
@@ -125,19 +125,29 @@ const NotesManager = () => {
 
   return (
     <div className="space-y-6">
+      {/* Breadcrumb */}
+      <div className="flex items-center text-sm text-gray-500">
+        <Link 
+          to={`/${user?.company?.slug}/manage`}
+          className="font-medium text-blue-600 hover:text-blue-700"
+        >
+          {user?.company?.name}
+        </Link>
+        <span className="mx-2">/</span>
+        <Link 
+          to={`/${companySlug}/${departmentSlug}`}
+          className="font-medium text-blue-600 hover:text-blue-700"
+        >
+          {department?.name}
+        </Link>
+        <span className="mx-2">/</span>
+        <span className="font-medium text-gray-900">Notes</span>
+      </div>
+
       {/* Header */}
       <div className="flex justify-between items-start">
         <div>
-          <div className="flex items-center space-x-2">
-            <Button
-              onClick={() => navigate(`/${companySlug}/${departmentSlug}`)}
-              variant="secondary"
-              className="text-sm"
-            >
-              ← Back to Dashboard
-            </Button>
-          </div>
-          <h1 className="text-3xl font-bold text-gray-900 mt-2">Notes</h1>
+          <h1 className="text-3xl font-bold text-gray-900">Notes</h1>
           <p className="text-gray-600">
             {department?.name} • Collaborative team notes
           </p>

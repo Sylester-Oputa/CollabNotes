@@ -29,16 +29,16 @@ const Navbar = () => {
   const navigation = [
     {
       name: 'Dashboard',
-      href: user?.role === 'SUPER_ADMIN' ? '/company' : `/department/${user?.department?.id}`,
+      href: user?.role === 'SUPER_ADMIN' ? `/${user?.company?.slug}/manage` : `/${user?.company?.slug}/${user?.department?.slug}`,
       icon: HomeIcon,
-      current: location.pathname === '/company' || location.pathname.startsWith('/department')
+      current: location.pathname === `/${user?.company?.slug}/manage` || location.pathname.startsWith(`/${user?.company?.slug}/${user?.department?.slug}`)
     },
     ...(user?.role === 'SUPER_ADMIN' ? [
       {
         name: 'Company',
-        href: '/company',
+        href: `/${user?.company?.slug}/manage`,
         icon: BuildingOfficeIcon,
-        current: location.pathname === '/company'
+        current: location.pathname === `/${user?.company?.slug}/manage`
       },
       {
         name: 'Activity',
@@ -50,21 +50,21 @@ const Navbar = () => {
     ...(user?.department ? [
       {
         name: 'Notes',
-        href: `/department/${user.department.id}/notes`,
+        href: `/${user?.company?.slug}/${user?.department?.slug}/notes`,
         icon: DocumentTextIcon,
         current: location.pathname.includes('/notes')
       },
       {
         name: 'Tasks',
-        href: `/department/${user.department.id}/tasks`,
+        href: `/${user?.company?.slug}/${user?.department?.slug}/tasks`,
         icon: ClipboardDocumentListIcon,
         current: location.pathname.includes('/tasks')
       },
       {
         name: 'Team',
-        href: `/department/${user.department.id}`,
+        href: `/${user?.company?.slug}/${user?.department?.slug}`,
         icon: UserGroupIcon,
-        current: location.pathname === `/department/${user.department.id}`
+        current: location.pathname === `/${user?.company?.slug}/${user?.department?.slug}`
       }
     ] : []),
   ];
@@ -76,8 +76,13 @@ const Navbar = () => {
           <div className="flex">
             <div className="flex-shrink-0 flex items-center">
               <Link to="/" className="text-xl font-bold text-blue-600">
-                CollabNotes
+                {user?.company?.name || 'CollabNotes'}
               </Link>
+              {user?.role === 'SUPER_ADMIN' && (
+                <span className="ml-2 px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded-full">
+                  Admin
+                </span>
+              )}
             </div>
             <div className="hidden sm:ml-6 sm:flex sm:space-x-8">
               {navigation.map((item) => (

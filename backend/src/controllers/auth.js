@@ -101,7 +101,8 @@ const registerCompany = async (req, res) => {
         role: result.admin.role,
         company: {
           id: result.company.id,
-          name: result.company.name
+          name: result.company.name,
+          slug: result.company.slug
         }
       }
     });

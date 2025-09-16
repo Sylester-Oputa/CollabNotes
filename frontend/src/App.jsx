@@ -53,21 +53,27 @@ const AppRoutes = () => {
       {/* Protected routes */}
       <Route path="/" element={
         <ProtectedRoute>
-          <Navigate to={user?.role === 'SUPER_ADMIN' ? '/company' : `/${user?.company?.slug}/${user?.department?.slug}`} replace />
+          <Navigate to={user?.role === 'SUPER_ADMIN' ? `/${user?.company?.slug}/manage` : `/${user?.company?.slug}/${user?.department?.slug}`} replace />
         </ProtectedRoute>
       } />
       
       <Route path="/dashboard" element={
         <ProtectedRoute>
-          <Navigate to={user?.role === 'SUPER_ADMIN' ? '/company' : `/${user?.company?.slug}/${user?.department?.slug}`} replace />
+          <Navigate to={user?.role === 'SUPER_ADMIN' ? `/${user?.company?.slug}/manage` : `/${user?.company?.slug}/${user?.department?.slug}`} replace />
+        </ProtectedRoute>
+      } />
+      
+      <Route path="/:companySlug/manage" element={
+        <ProtectedRoute>
+          <Layout>
+            <DepartmentManagement />
+          </Layout>
         </ProtectedRoute>
       } />
       
       <Route path="/company" element={
         <ProtectedRoute>
-          <Layout>
-            <DepartmentManagement />
-          </Layout>
+          <Navigate to={`/${user?.company?.slug}/manage`} replace />
         </ProtectedRoute>
       } />
       

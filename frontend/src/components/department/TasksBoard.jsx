@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import Card from '../ui/Card';
 import Button from '../ui/Button';
@@ -142,6 +142,14 @@ const TasksBoard = () => {
 
   const isHead = user?.role === 'HEAD_OF_DEPARTMENT';
   const canManage = isHead || user?.role === 'SUPER_ADMIN';
+  const isMember = !canManage;
+
+  // Members can only move their own tasks along the normal flow: TODO -> IN_PROGRESS -> DONE
+  const canMemberMoveTo = (current, next) => {
+    if (current === 'TODO' && next === 'IN_PROGRESS') return true;
+    if (current === 'IN_PROGRESS' && next === 'DONE') return true;
+    return false;
+  };
 
   if (loading) {
     return (
@@ -153,33 +161,45 @@ const TasksBoard = () => {
 
   return (
     <div className="space-y-6">
+      {/* Breadcrumb */}
+      <div className="flex items-center text-sm text-gray-500">
+        <Link 
+          to={`/${user?.company?.slug}/manage`}
+          className="font-medium text-blue-600 hover:text-blue-700"
+        >
+          {user?.company?.name}
+        </Link>
+        <span className="mx-2">/</span>
+        <Link 
+          to={`/${companySlug}/${departmentSlug}`}
+          className="font-medium text-blue-600 hover:text-blue-700"
+        >
+          {department?.name}
+        </Link>
+        <span className="mx-2">/</span>
+        <span className="font-medium text-gray-900">Tasks</span>
+      </div>
+
       {/* Header */}
       <div className="flex justify-between items-start">
         <div>
-          <div className="flex items-center space-x-2">
-            <Button
-              onClick={() => navigate(`/${companySlug}/${departmentSlug}`)}
-              variant="secondary"
-              className="text-sm"
-            >
-              ← Back to Dashboard
-            </Button>
-          </div>
-          <h1 className="text-3xl font-bold text-gray-900 mt-2">Tasks Board</h1>
+          <h1 className="text-3xl font-bold text-gray-900">Tasks Board</h1>
           <p className="text-gray-600">
             {department?.name} • Team task management
           </p>
         </div>
-        <Button
-          onClick={() => setShowCreateForm(true)}
-          className="bg-green-600 hover:bg-green-700"
-        >
-          ➕ New Task
-        </Button>
+        {canManage && (
+          <Button
+            onClick={() => setShowCreateForm(true)}
+            className="bg-green-600 hover:bg-green-700"
+          >
+            ➕ New Task
+          </Button>
+        )}
       </div>
 
       {/* Create Task Form */}
-      {showCreateForm && (
+      {canManage && showCreateForm && (
         <Card>
           <Card.Header>
             <h3 className="text-lg font-semibold">Create New Task</h3>
@@ -348,8 +368,26 @@ const TasksBoard = () => {
                           
                           <div className="flex items-center justify-between pt-2">
                             <div className="flex space-x-1">
-                              {taskStatuses.map((newStatus) => (
-                                newStatus.key !== task.status && (
+                              {taskStatuses.map((newStatus) => {
+                                if (newStatus.key === task.status) return null;
+                                // Heads/Super Admin: full control
+                                if (canManage) {
+                                  return (
+                                    <Button
+                                      key={newStatus.key}
+                                      onClick={() => handleUpdateTaskStatus(task.id, newStatus.key)}
+                                      className="text-xs px-2 py-1 bg-gray-600 hover:bg-gray-700"
+                                      title={`Move to ${newStatus.label}`}
+                                    >
+                                      →{newStatus.label.charAt(0)}
+                                    </Button>
+                                  );
+                                }
+                                // Members: can only move their own assigned tasks along allowed transitions
+                                const isAssignedToUser = task.assignedTo?.id === user?.id;
+                                const allowed = isAssignedToUser && canMemberMoveTo(task.status, newStatus.key);
+                                if (!allowed) return null;
+                                return (
                                   <Button
                                     key={newStatus.key}
                                     onClick={() => handleUpdateTaskStatus(task.id, newStatus.key)}
@@ -358,11 +396,11 @@ const TasksBoard = () => {
                                   >
                                     →{newStatus.label.charAt(0)}
                                   </Button>
-                                )
-                              ))}
+                                );
+                              })}
                             </div>
                             
-                            {(task.authorId === user?.id || canManage) && (
+                            {canManage && (
                               <Button
                                 onClick={() => handleDeleteTask(task.id, task.title)}
                                 className="text-xs px-2 py-1 bg-red-600 hover:bg-red-700"
