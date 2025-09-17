@@ -3,7 +3,10 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import Card from '../ui/Card';
 import Button from '../ui/Button';
-import { departments as departmentsAPI } from '../../utils/api';
+import { ChatUsersProvider } from '../../context/ChatUsersContext';
+import ChatWidget from '../chat/ChatWidget';
+import { departments as departmentsAPI, messages as messagesAPI } from '../../utils/api';
+import { useChat } from '../../context/ChatContext';
 import toast from 'react-hot-toast';
 
 const DepartmentDashboard = () => {
@@ -18,6 +21,7 @@ const DepartmentDashboard = () => {
     completedTasks: 0,
     recentActivity: []
   });
+  const { openChat } = useChat();
 
   useEffect(() => {
     if (companySlug && departmentSlug) {
@@ -49,6 +53,8 @@ const DepartmentDashboard = () => {
   const canManage = isHead || user?.role === 'SUPER_ADMIN';
   const isMember = !canManage;
 
+  
+
   if (loading) {
     return (
       <div className="flex justify-center items-center py-8">
@@ -70,7 +76,8 @@ const DepartmentDashboard = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <ChatUsersProvider users={department?.users || []}>
+  <div className="space-y-6">
       {/* Breadcrumb */}
       <div className="flex items-center text-sm text-gray-500">
         <Link 
@@ -242,8 +249,8 @@ const DepartmentDashboard = () => {
         )}
       </div>
 
-      {/* Team Members */}
-      {canManage && department.users && department.users.length > 0 && (
+      {/* Team Members visible to all roles */}
+      {department.users && department.users.length > 0 && (
         <Card>
           <Card.Header>
             <h3 className="text-lg font-semibold">Team Members</h3>
@@ -267,6 +274,14 @@ const DepartmentDashboard = () => {
                       {member.role === 'HEAD_OF_DEPARTMENT' ? '👑 Head' : '👤 Member'}
                     </p>
                   </div>
+                  {/* Message button, hidden for self */}
+                  {member.id !== user?.id && (
+                    <div className="flex-shrink-0">
+                      <Button variant="outline" size="sm" onClick={() => openChat(member)}>
+                        💬
+                      </Button>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -286,7 +301,10 @@ const DepartmentDashboard = () => {
           </div>
         </Card.Content>
       </Card>
+
+      <ChatWidget />
     </div>
+    </ChatUsersProvider>
   );
 };
 

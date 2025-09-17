@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { ChatProvider } from './context/ChatContext';
 import ProtectedRoute from './components/layout/ProtectedRoute';
 import Layout from './components/layout/Layout';
 
@@ -56,13 +57,7 @@ const AppRoutes = () => {
           <Navigate to={user?.role === 'SUPER_ADMIN' ? `/${user?.company?.slug}/manage` : `/${user?.company?.slug}/${user?.department?.slug}`} replace />
         </ProtectedRoute>
       } />
-      
-      <Route path="/dashboard" element={
-        <ProtectedRoute>
-          <Navigate to={user?.role === 'SUPER_ADMIN' ? `/${user?.company?.slug}/manage` : `/${user?.company?.slug}/${user?.department?.slug}`} replace />
-        </ProtectedRoute>
-      } />
-      
+
       <Route path="/:companySlug/manage" element={
         <ProtectedRoute>
           <Layout>
@@ -117,6 +112,12 @@ const AppRoutes = () => {
         </ProtectedRoute>
       } />
       
+      <Route path="/admin" element={
+        <ProtectedRoute>
+          <ConditionalDashboardLayout />
+        </ProtectedRoute>
+      } />
+      
       <Route path="/profile" element={
         <ProtectedRoute>
           <PlaceholderPage title="Profile Settings" />
@@ -147,7 +148,9 @@ function App() {
     <AuthProvider>
       <Router>
         <div className="App">
-          <AppRoutes />
+          <ChatProvider>
+            <AppRoutes />
+          </ChatProvider>
           <Toaster
             position="top-right"
             toastOptions={{

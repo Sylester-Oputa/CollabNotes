@@ -1,78 +1,44 @@
 import React, { useState } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { 
-  HomeIcon, 
-  BuildingOfficeIcon, 
-  UserGroupIcon,
-  DocumentTextIcon,
-  ClipboardDocumentListIcon,
   ChartBarIcon,
   UserIcon,
   Bars3Icon,
   XMarkIcon,
-  ArrowRightOnRectangleIcon
+  ArrowRightOnRectangleIcon,
+  BuildingStorefrontIcon,
+  CurrencyDollarIcon
 } from '@heroicons/react/24/outline';
-import Button from '../ui/Button';
 
 const Navbar = () => {
   const { user, logout } = useAuth();
-  const navigate = useNavigate();
   const location = useLocation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const handleLogout = () => {
     logout();
-    navigate('/login');
   };
 
   const navigation = [
     {
-      name: 'Dashboard',
+      name: 'Analytics',
       href: '/dashboard',
-      icon: HomeIcon,
+      icon: ChartBarIcon,
       current: location.pathname === '/dashboard'
     },
-    ...(user?.role === 'SUPER_ADMIN' ? [
-      {
-        name: 'Company',
-        href: `/${user?.company?.slug}/manage`,
-        icon: BuildingOfficeIcon,
-        current: location.pathname === `/${user?.company?.slug}/manage`
-      },
-      {
-        name: 'Messages',
-        href: `/${user?.company?.slug}/manage/messages`,
-        icon: UserGroupIcon,
-        current: location.pathname === `/${user?.company?.slug}/manage/messages`
-      },
-      {
-        name: 'Activity',
-        href: `/activity`,
-        icon: ChartBarIcon,
-        current: location.pathname.startsWith('/activity')
-      }
-    ] : []),
-    ...(user?.department ? [
-      {
-        name: 'Notes',
-        href: `/${user?.company?.slug}/${user?.department?.slug}/notes`,
-        icon: DocumentTextIcon,
-        current: location.pathname.includes('/notes')
-      },
-      {
-        name: 'Tasks',
-        href: `/${user?.company?.slug}/${user?.department?.slug}/tasks`,
-        icon: ClipboardDocumentListIcon,
-        current: location.pathname.includes('/tasks')
-      },
-      {
-        name: 'Team',
-        href: `/${user?.company?.slug}/${user?.department?.slug}`,
-        icon: UserGroupIcon,
-        current: location.pathname === `/${user?.company?.slug}/${user?.department?.slug}`
-      }
-    ] : []),
+    {
+      name: 'Revenue',
+      href: '/revenue',
+      icon: CurrencyDollarIcon,
+      current: location.pathname === '/revenue'
+    },
+    {
+      name: 'Companies',
+      href: '/companies',
+      icon: BuildingStorefrontIcon,
+      current: location.pathname === '/companies'
+    }
   ];
 
   return (
@@ -81,14 +47,12 @@ const Navbar = () => {
         <div className="flex justify-between h-16">
           <div className="flex">
             <div className="flex-shrink-0 flex items-center">
-              <Link to="/" className="text-xl font-bold text-blue-600">
-                {user?.company?.name || 'CollabNotes'}
+              <Link to="/dashboard" className="text-xl font-bold text-blue-600">
+                CollabNotes Platform
               </Link>
-              {user?.role === 'SUPER_ADMIN' && (
-                <span className="ml-2 px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded-full">
-                  Admin
-                </span>
-              )}
+              <span className="ml-2 px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded-full">
+                Platform Admin
+              </span>
             </div>
             <div className="hidden sm:ml-6 sm:flex sm:space-x-8">
               {navigation.map((item) => (
@@ -112,18 +76,21 @@ const Navbar = () => {
             <div className="flex items-center space-x-2 text-sm text-gray-700">
               <span>{user?.name}</span>
               <span className="px-2 py-1 text-xs bg-gray-100 rounded-full">
-                {user?.role === 'SUPER_ADMIN' ? 'Platform Owner' : 
-                 user?.role === 'HEAD_OF_DEPARTMENT' ? 'Company Admin' : 'Team Member'}
+                Platform Owner
               </span>
             </div>
             <Link to="/profile">
-              <Button variant="ghost" size="sm">
-                <UserIcon className="h-4 w-4" />
-              </Button>
+              <button className="text-gray-400 hover:text-gray-500 p-2">
+                <UserIcon className="h-5 w-5" />
+              </button>
             </Link>
-            <Button variant="ghost" size="sm" onClick={handleLogout}>
-              <ArrowRightOnRectangleIcon className="h-4 w-4" />
-            </Button>
+            <button 
+              onClick={handleLogout}
+              className="text-gray-400 hover:text-gray-500 p-2"
+              title="Sign out"
+            >
+              <ArrowRightOnRectangleIcon className="h-5 w-5" />
+            </button>
           </div>
 
           <div className="sm:hidden flex items-center">
