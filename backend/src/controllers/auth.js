@@ -61,13 +61,13 @@ const registerCompany = async (req, res) => {
         }
       });
 
-      // Create super admin user
+      // Create company admin user
       const admin = await tx.user.create({
         data: {
           name: adminName,
           email: adminEmail,
           passwordHash,
-          role: 'SUPER_ADMIN',
+          role: 'ADMIN', // Company Owner role
           companyId: company.id
         }
       });

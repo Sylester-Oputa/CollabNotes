@@ -30,21 +30,24 @@ router.get('/overview', authenticateToken, async (req, res) => {
     }
 
     // User's department information
-    const departmentInfo = await prisma.department.findFirst({
-      where: { 
-        companyId,
-        name: department // Assuming department is stored as name in user table
-      },
-      include: {
-        _count: {
-          select: {
-            users: true,
-            notes: true,
-            tasks: true
+    let departmentInfo = null;
+    if (req.user.departmentId) {
+      departmentInfo = await prisma.department.findFirst({
+        where: { 
+          companyId,
+          id: req.user.departmentId // Use departmentId from user instead of name
+        },
+        include: {
+          _count: {
+            select: {
+              users: true,
+              notes: true,
+              tasks: true
+            }
           }
         }
-      }
-    });
+      });
+    }
 
     // User's personal statistics
     const userStats = await prisma.user.findUnique({
@@ -58,7 +61,7 @@ router.get('/overview', authenticateToken, async (req, res) => {
                 deletedAt: null
               }
             },
-            receivedNotifications: {
+            notifications: {
               where: {
                 createdAt: { gte: startDate }
               }
@@ -73,15 +76,15 @@ router.get('/overview', authenticateToken, async (req, res) => {
     const colleagues = await prisma.user.findMany({
       where: {
         companyId,
-        department,
-        id: { not: userId }
+        departmentId: req.user.departmentId, // Use departmentId instead of department
+        id: { not: userId },
+        // Only fetch colleagues if user has a department
+        ...(req.user.departmentId ? {} : { id: { in: [] } }) // Return empty array if no department
       },
       select: {
         id: true,
         name: true,
         email: true,
-        avatar: true,
-        isOnline: true,
         lastSeen: true
       },
       take: 10,
@@ -134,20 +137,20 @@ router.get('/overview', authenticateToken, async (req, res) => {
     const unreadNotifications = await prisma.notification.count({
       where: {
         userId,
-        isRead: false
+        read: false
       }
     });
 
     // User's message activity over time
     const messageActivity = await prisma.$queryRaw`
       SELECT 
-        DATE(created_at) as date,
+        DATE("createdAt") as date,
         COUNT(*) as count
       FROM messages 
-      WHERE sender_id = ${userId}
-        AND created_at >= ${startDate}
-        AND deleted_at IS NULL
-      GROUP BY DATE(created_at)
+      WHERE "senderId" = ${userId}
+        AND "createdAt" >= ${startDate}
+        AND "deletedAt" IS NULL
+      GROUP BY DATE("createdAt")
       ORDER BY date ASC
     `;
 
@@ -164,7 +167,7 @@ router.get('/overview', authenticateToken, async (req, res) => {
       } : null,
       userStats: {
         messagesSent: userStats._count.sentMessages,
-        notificationsReceived: userStats._count.receivedNotifications,
+        notificationsReceived: userStats._count.notifications,
         groupMemberships: userStats._count.groupMemberships,
         unreadNotifications
       },
@@ -172,8 +175,6 @@ router.get('/overview', authenticateToken, async (req, res) => {
         id: colleague.id,
         name: colleague.name,
         email: colleague.email,
-        avatar: colleague.avatar,
-        isOnline: colleague.isOnline,
         lastSeen: colleague.lastSeen
       })),
       recentMessages: recentMessages.map(message => ({
@@ -300,11 +301,18 @@ router.get('/my-stats', authenticateToken, async (req, res) => {
 router.get('/colleagues', authenticateToken, async (req, res) => {
   try {
     const { search, status } = req.query;
-    const { id: userId, companyId, department } = req.user;
+    const { id: userId, companyId, departmentId } = req.user;
+
+    // If user has no department, return empty list
+    if (!departmentId) {
+      return res.json({
+        colleagues: []
+      });
+    }
 
     const filters = {
       companyId,
-      department,
+      departmentId,
       id: { not: userId }
     };
 
@@ -315,9 +323,7 @@ router.get('/colleagues', authenticateToken, async (req, res) => {
       ];
     }
 
-    if (status === 'online') {
-      filters.isOnline = true;
-    } else if (status === 'active') {
+    if (status === 'active') {
       filters.lastSeen = { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) };
     }
 
@@ -327,14 +333,11 @@ router.get('/colleagues', authenticateToken, async (req, res) => {
         id: true,
         name: true,
         email: true,
-        avatar: true,
         role: true,
-        isOnline: true,
         lastSeen: true,
         createdAt: true
       },
       orderBy: [
-        { isOnline: 'desc' },
         { lastSeen: 'desc' }
       ]
     });
@@ -344,9 +347,7 @@ router.get('/colleagues', authenticateToken, async (req, res) => {
         id: colleague.id,
         name: colleague.name,
         email: colleague.email,
-        avatar: colleague.avatar,
         role: colleague.role,
-        isOnline: colleague.isOnline,
         lastSeen: colleague.lastSeen,
         joinedAt: colleague.createdAt
       }))
@@ -387,8 +388,7 @@ router.get('/my-groups', authenticateToken, async (req, res) => {
             sender: {
               select: {
                 id: true,
-                name: true,
-                avatar: true
+                name: true
               }
             }
           }
@@ -452,8 +452,7 @@ router.get('/recent-activity', authenticateToken, async (req, res) => {
         user: {
           select: {
             id: true,
-            name: true,
-            avatar: true
+            name: true
           }
         },
         message: {

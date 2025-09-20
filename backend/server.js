@@ -87,7 +87,12 @@ const reactionRoutes = require('./src/routes/reactions');
 const threadRoutes = require('./src/routes/threads');
 const platformAdminRoutes = require('./src/routes/platform-admin');
 const companyAdminRoutes = require('./src/routes/company-admin');
+const departmentHeadRoutes = require('./src/routes/department-head');
+const userRoutes = require('./src/routes/user');
 const departmentDashboardRoutes = require('./src/routes/department-dashboard');
+const securityRoutes = require('./src/routes/security'); // Advanced Security Features
+const workflowRoutes = require('./src/routes/workflow'); // Workflow Automation System
+const communicationRoutes = require('./src/routes/communication'); // Communication Enhancement Suite
 
 // API routes
 app.use('/api/auth', authRoutes);
@@ -103,7 +108,12 @@ app.use('/api/messages', reactionRoutes);
 app.use('/api/threads', threadRoutes);
 app.use('/api/platform-admin', platformAdminRoutes);
 app.use('/api/company-admin', companyAdminRoutes);
+app.use('/api/department-head', departmentHeadRoutes);
+app.use('/api/user', userRoutes);
 app.use('/api/department-dashboard', departmentDashboardRoutes);
+app.use('/api/security', securityRoutes); // Advanced Security Features
+app.use('/api/workflow', workflowRoutes); // Workflow Automation System
+app.use('/api/communication', communicationRoutes); // Communication Enhancement Suite
 
 // Static file serving for uploads
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));

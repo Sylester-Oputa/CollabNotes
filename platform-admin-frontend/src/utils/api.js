@@ -71,20 +71,68 @@ export const platformAPI = {
   },
 
   // Companies management
-  getCompanies: async (page = 1, limit = 20, sortBy = 'createdAt', sortOrder = 'desc') => {
-    const response = await api.get(`/platform-admin/companies?page=${page}&limit=${limit}&sortBy=${sortBy}&sortOrder=${sortOrder}`);
+  getCompanies: async (page = 1, limit = 20, sortBy = 'createdAt', sortOrder = 'desc', plan = null, status = null) => {
+    let url = `/platform-admin/companies?page=${page}&limit=${limit}&sortBy=${sortBy}&sortOrder=${sortOrder}`;
+    if (plan) url += `&plan=${plan}`;
+    if (status) url += `&status=${status}`;
+    const response = await api.get(url);
     return response.data;
   },
 
-  // Company revenue details
-  getCompanyRevenue: async (companyId) => {
-    const response = await api.get(`/platform-admin/company-revenue/${companyId}`);
+  // Company details
+  getCompany: async (companyId) => {
+    const response = await api.get(`/platform-admin/companies/${companyId}`);
+    return response.data;
+  },
+
+  // Update company subscription
+  updateCompanySubscription: async (companyId, planId, billingCycle = 'monthly') => {
+    const response = await api.put(`/platform-admin/companies/${companyId}/subscription`, {
+      planId,
+      billingCycle
+    });
     return response.data;
   },
 
   // Platform statistics
   getPlatformStats: async () => {
     const response = await api.get('/platform-admin/platform-stats');
+    return response.data;
+  },
+
+  // Subscription analytics
+  getSubscriptionAnalytics: async (timeframe = '30d') => {
+    const response = await api.get(`/platform-admin/subscription-analytics?timeframe=${timeframe}`);
+    return response.data;
+  },
+
+  // Trial conversion metrics
+  getTrialConversions: async (timeframe = '30d') => {
+    const response = await api.get(`/platform-admin/trial-conversions?timeframe=${timeframe}`);
+    return response.data;
+  },
+
+  // Plan performance
+  getPlanPerformance: async () => {
+    const response = await api.get('/platform-admin/plan-performance');
+    return response.data;
+  },
+
+  // Revenue breakdown
+  getRevenueBreakdown: async (timeframe = '30d') => {
+    const response = await api.get(`/platform-admin/revenue-breakdown?timeframe=${timeframe}`);
+    return response.data;
+  },
+
+  // Churn analytics
+  getChurnAnalytics: async (timeframe = '30d') => {
+    const response = await api.get(`/platform-admin/churn-analytics?timeframe=${timeframe}`);
+    return response.data;
+  },
+
+  // System health
+  getSystemHealth: async () => {
+    const response = await api.get('/platform-admin/system/health');
     return response.data;
   }
 };

@@ -105,7 +105,25 @@ async function main() {
     },
   });
 
-  // Create sample HEAD_OF_DEPARTMENT user
+  // Create sample ADMIN (company owner) user
+  const sampleAdminPassword = await bcrypt.hash('DemoAdmin2024!', 12);
+  const sampleAdmin = await prisma.user.upsert({
+    where: { email: 'admin@demo.com' },
+    update: {
+      passwordHash: sampleAdminPassword,
+    },
+    create: {
+      name: 'Demo Company Owner',
+      email: 'admin@demo.com',
+      passwordHash: sampleAdminPassword,
+      role: 'ADMIN',
+      departmentRole: 'Company Owner',
+      companyId: sampleCompany.id,
+      departmentId: null, // Company owners don't belong to specific departments
+    },
+  });
+
+  // Create sample DEPT_HEAD user
   const sampleHeadPassword = await bcrypt.hash('DemoHead2024!', 12);
   const sampleHead = await prisma.user.upsert({
     where: { email: 'head@demo.com' },
@@ -116,7 +134,7 @@ async function main() {
       name: 'Demo Department Head',
       email: 'head@demo.com',
       passwordHash: sampleHeadPassword,
-      role: 'HEAD_OF_DEPARTMENT',
+      role: 'DEPT_HEAD',
       departmentRole: 'Engineering Manager',
       companyId: sampleCompany.id,
       departmentId: sampleDepartment.id,
@@ -164,10 +182,15 @@ async function main() {
   console.log(`   Password: PlatformAdmin2024!`);
   console.log(`   Role: SUPER_ADMIN`);
   console.log(`   Company: ${platformCompany.name}`);
-  console.log('\n🔐 DEMO COMPANY HEAD (HEAD_OF_DEPARTMENT):');
+  console.log('\n🔐 DEMO COMPANY OWNER (ADMIN):');
+  console.log(`   Email: admin@demo.com`);
+  console.log(`   Password: DemoAdmin2024!`);
+  console.log(`   Role: ADMIN`);
+  console.log(`   Company: ${sampleCompany.name}`);
+  console.log('\n🔐 DEMO COMPANY HEAD (DEPT_HEAD):');
   console.log(`   Email: head@demo.com`);
   console.log(`   Password: DemoHead2024!`);
-  console.log(`   Role: HEAD_OF_DEPARTMENT`);
+  console.log(`   Role: DEPT_HEAD`);
   console.log(`   Company: ${sampleCompany.name}`);
   console.log('\n🔐 DEMO TEAM MEMBER (USER):');
   console.log(`   Email: user@demo.com`);

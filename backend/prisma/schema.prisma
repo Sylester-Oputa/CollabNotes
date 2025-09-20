@@ -11,9 +11,10 @@ datasource db {
 }
 
 enum UserRole {
-  SUPER_ADMIN
-  HEAD_OF_DEPARTMENT
-  USER
+  SUPER_ADMIN // Platform Owner (CollabNotes team)
+  ADMIN // Company Owner (business that registers with CollabNotes)
+  DEPT_HEAD // Department Head (manages specific departments within companies)
+  USER // Team Member (works within departments)
 }
 
 enum TaskStatus {
@@ -45,11 +46,30 @@ model Company {
   updatedAt DateTime @updatedAt
 
   // Relations
-  departments   Department[]
-  users         User[]
-  activityLogs  ActivityLog[]
-  messages      Message[]
-  messageGroups MessageGroup[]
+  departments            Department[]
+  users                  User[]
+  activityLogs           ActivityLog[]
+  messages               Message[]
+  messageGroups          MessageGroup[]
+  // Warning system relations
+  warnings               Warning[]
+  warningNotifications   WarningNotification[]
+  // Security relations
+  securityLogs           SecurityLog[]
+  auditLogs              AuditLog[]
+  apiKeys                ApiKey[]
+  ssoConfigurations      SsoConfiguration[]
+  // Workflow automation relations
+  workflowTemplates      WorkflowTemplate[]
+  assignmentRules        AssignmentRule[]
+  // Communication Enhancement relations
+  emailTemplates         EmailTemplate[]
+  emailLogs              EmailLog[]
+  videoCalls             VideoCall[]
+  voiceMessages          VoiceMessage[]
+  screenShareSessions    ScreenShareSession[]
+  collaborativeDocuments CollaborativeDocument[]
+  sharedFiles            SharedFile[]
 
   @@map("companies")
 }
@@ -88,19 +108,59 @@ model User {
   updatedAt      DateTime  @updatedAt
 
   // Relations
-  company              Company              @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  department           Department?          @relation(fields: [departmentId], references: [id], onDelete: SetNull)
-  createdNotes         Note[]               @relation("NoteCreator")
-  assignedTasks        Task[]               @relation("TaskAssignee")
-  createdTasks         Task[]               @relation("TaskCreator")
-  activityLogs         ActivityLog[]
-  sentMessages         Message[]            @relation("MessageSender")
-  receivedMessages     Message[]            @relation("MessageRecipient")
-  messageReactions     MessageReaction[]
-  groupMemberships     GroupMembership[]
-  createdGroups        MessageGroup[]       @relation("GroupCreator")
-  notificationSettings NotificationSetting?
-  notifications        Notification[]
+  company                    Company                   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  department                 Department?               @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  createdNotes               Note[]                    @relation("NoteCreator")
+  assignedTasks              Task[]                    @relation("TaskAssignee")
+  createdTasks               Task[]                    @relation("TaskCreator")
+  activityLogs               ActivityLog[]
+  sentMessages               Message[]                 @relation("MessageSender")
+  receivedMessages           Message[]                 @relation("MessageRecipient")
+  messageReactions           MessageReaction[]
+  groupMemberships           GroupMembership[]
+  createdGroups              MessageGroup[]            @relation("GroupCreator")
+  notificationSettings       NotificationSetting?
+  notifications              Notification[]
+  // Warning system relations
+  receivedWarnings           Warning[]                 @relation("UserWarnings")
+  issuedWarnings             Warning[]                 @relation("IssuedWarnings")
+  resolvedWarnings           Warning[]                 @relation("ResolvedWarnings")
+  strikeNotifications        WarningNotification[]     @relation("StrikeNotifications")
+  // Security relations
+  twoFactorAuth              TwoFactorAuth?
+  securityLogs               SecurityLog[]
+  loginSessions              LoginSession[]
+  emailVerifications         EmailVerification?
+  auditLogs                  AuditLog[]
+  passwordHistory            PasswordHistory[]
+  apiKeys                    ApiKey[]
+  ssoUserMappings            SsoUserMapping[]
+  // Workflow automation relations
+  createdWorkflowTemplates   WorkflowTemplate[]        @relation("WorkflowCreator")
+  initiatedWorkflows         WorkflowInstance[]        @relation("WorkflowInitiator")
+  assignedExecutions         WorkflowExecution[]       @relation("WorkflowAssignee")
+  requestedApprovals         ApprovalRequest[]         @relation("ApprovalRequester")
+  respondedApprovals         ApprovalRequest[]         @relation("ApprovalResponder")
+  createdAssignmentRules     AssignmentRule[]          @relation("AssignmentRuleCreator")
+  createdLibraryTemplates    WorkflowTemplateLibrary[] @relation("LibraryTemplateCreator")
+  // Communication Enhancement relations
+  emailTemplatesCreated      EmailTemplate[]           @relation("EmailTemplateCreator")
+  emailsSent                 EmailLog[]                @relation("EmailSender")
+  videoCalls                 VideoCall[]               @relation("CallInitiator")
+  callRecordings             CallRecording[]           @relation("CallRecorder")
+  voiceMessagesSent          VoiceMessage[]            @relation("VoiceMessageSender")
+  voiceMessagesReceived      VoiceMessage[]            @relation("VoiceMessageRecipient")
+  screenShareSessions        ScreenShareSession[]      @relation("ScreenShareHost")
+  screenShareInteractions    ScreenShareInteraction[]  @relation("ScreenShareUser")
+  documentsCreated           CollaborativeDocument[]   @relation("DocumentCreator")
+  documentsEdited            CollaborativeDocument[]   @relation("DocumentEditor")
+  documentsLocked            CollaborativeDocument[]   @relation("DocumentLocker")
+  documentPermissions        DocumentPermission[]      @relation("DocumentPermissionUser")
+  documentPermissionsGranted DocumentPermission[]      @relation("DocumentPermissionGrantor")
+  documentVersions           DocumentVersion[]         @relation("DocumentVersionCreator")
+  documentCollaborations     DocumentCollaboration[]   @relation("DocumentCollaborator")
+  filesUploaded              SharedFile[]              @relation("FileUploader")
+  fileAccesses               FileAccess[]              @relation("FileAccessUser")
 
   @@map("users")
 }
@@ -229,10 +289,13 @@ model MessageGroup {
   updatedAt   DateTime @updatedAt
 
   // Relations
-  company  Company           @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  creator  User              @relation("GroupCreator", fields: [createdBy], references: [id], onDelete: Cascade)
-  members  GroupMembership[]
-  messages Message[]
+  company             Company              @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  creator             User                 @relation("GroupCreator", fields: [createdBy], references: [id], onDelete: Cascade)
+  members             GroupMembership[]
+  messages            Message[]
+  // Communication Enhancement relations
+  voiceMessages       VoiceMessage[]
+  documentPermissions DocumentPermission[]
 
   @@map("message_groups")
 }
@@ -281,4 +344,916 @@ model Notification {
   user User @relation(fields: [userId], references: [id])
 
   @@map("notifications")
+}
+
+model Warning {
+  id          String    @id @default(cuid())
+  userId      String // User receiving the warning
+  issuedBy    String // ADMIN who issued the warning
+  companyId   String // Company context
+  title       String // Warning title/category
+  description String // Detailed warning notes
+  severity    String    @default("LOW") // LOW, MEDIUM, HIGH, CRITICAL
+  isActive    Boolean   @default(true) // Can be resolved/dismissed
+  createdAt   DateTime  @default(now())
+  resolvedAt  DateTime?
+  resolvedBy  String? // Who resolved/dismissed the warning
+
+  // Relations
+  user     User    @relation("UserWarnings", fields: [userId], references: [id], onDelete: Cascade)
+  issuer   User    @relation("IssuedWarnings", fields: [issuedBy], references: [id], onDelete: Cascade)
+  company  Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  resolver User?   @relation("ResolvedWarnings", fields: [resolvedBy], references: [id], onDelete: SetNull)
+
+  @@index([userId, companyId])
+  @@index([issuedBy, companyId])
+  @@map("warnings")
+}
+
+model WarningNotification {
+  id          String    @id @default(cuid())
+  companyId   String // Company that receives the notification
+  userId      String // User who reached strike limit
+  strikeCount Int // Number of active warnings/strikes
+  threshold   Int       @default(5) // Strike threshold (configurable)
+  message     String // Notification message
+  isRead      Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  readAt      DateTime?
+
+  // Relations
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  user    User    @relation("StrikeNotifications", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([companyId, isRead])
+  @@map("warning_notifications")
+}
+
+// Advanced Security Features
+
+model TwoFactorAuth {
+  id          String    @id @default(cuid())
+  userId      String    @unique
+  secret      String? // Base32 encoded secret
+  tempSecret  String? // Temporary secret during setup
+  isEnabled   Boolean   @default(false)
+  method      String    @default("AUTHENTICATOR") // AUTHENTICATOR, SMS, EMAIL
+  backupCodes String? // JSON array of hashed backup codes
+  enabledAt   DateTime?
+  disabledAt  DateTime?
+  lastUsed    DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("two_factor_auth")
+}
+
+model SecurityLog {
+  id        String   @id @default(cuid())
+  userId    String
+  companyId String
+  event     String // LOGIN_ATTEMPT, 2FA_ENABLED, PASSWORD_CHANGED, etc.
+  metadata  Json? // IP address, user agent, location, etc.
+  timestamp DateTime @default(now())
+
+  // Relations
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([userId, timestamp])
+  @@index([companyId, timestamp])
+  @@map("security_logs")
+}
+
+model LoginSession {
+  id           String   @id @default(cuid())
+  userId       String
+  sessionToken String   @unique
+  ipAddress    String?
+  userAgent    String?
+  location     String? // City, Country
+  isActive     Boolean  @default(true)
+  expiresAt    DateTime
+  lastActivity DateTime @default(now())
+  createdAt    DateTime @default(now())
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isActive])
+  @@index([sessionToken])
+  @@map("login_sessions")
+}
+
+model EmailVerification {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  code      String // Hashed verification code
+  email     String
+  attempts  Int      @default(0)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("email_verifications")
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  userId     String?
+  companyId  String
+  action     String // CREATE, UPDATE, DELETE, LOGIN, LOGOUT
+  resource   String // USER, COMPANY, NOTE, TASK, etc.
+  resourceId String?
+  oldValues  Json?
+  newValues  Json?
+  ipAddress  String?
+  userAgent  String?
+  timestamp  DateTime @default(now())
+
+  // Relations
+  user    User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([companyId, timestamp])
+  @@index([userId, timestamp])
+  @@index([resource, resourceId])
+  @@map("audit_logs")
+}
+
+model PasswordHistory {
+  id           String   @id @default(cuid())
+  userId       String
+  passwordHash String
+  createdAt    DateTime @default(now())
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@map("password_history")
+}
+
+model ApiKey {
+  id          String    @id @default(cuid())
+  userId      String
+  companyId   String
+  name        String // Key name/description
+  keyHash     String    @unique
+  permissions Json // Array of permissions
+  isActive    Boolean   @default(true)
+  lastUsed    DateTime?
+  expiresAt   DateTime?
+  createdAt   DateTime  @default(now())
+
+  // Relations
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([companyId])
+  @@map("api_keys")
+}
+
+// SSO (Single Sign-On) Configuration
+
+model SsoConfiguration {
+  id           String   @id @default(cuid())
+  companyId    String
+  provider     String // google, microsoft, github, saml
+  clientId     String
+  clientSecret String // Encrypted
+  domain       String? // Optional domain restriction
+  metadata     Json? // Provider-specific metadata
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, provider])
+  @@map("sso_configurations")
+}
+
+model SsoUserMapping {
+  id         String   @id @default(cuid())
+  userId     String
+  provider   String // google, microsoft, github, saml
+  providerId String // User ID from the provider
+  email      String
+  lastLogin  DateTime @default(now())
+  createdAt  DateTime @default(now())
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, provider])
+  @@index([providerId, provider])
+  @@map("sso_user_mappings")
+}
+
+// ========== WORKFLOW AUTOMATION SYSTEM ==========
+
+enum WorkflowStatus {
+  DRAFT
+  ACTIVE
+  PAUSED
+  COMPLETED
+  CANCELLED
+}
+
+enum WorkflowStepType {
+  TASK_CREATION
+  APPROVAL
+  NOTIFICATION
+  ASSIGNMENT
+  CONDITION
+  DELAY
+  EMAIL
+  WEBHOOK
+  DATA_UPDATE
+  SUBPROCESS
+}
+
+enum WorkflowTriggerType {
+  MANUAL
+  TASK_CREATED
+  TASK_UPDATED
+  TASK_COMPLETED
+  USER_ASSIGNED
+  DEADLINE_APPROACHING
+  TIME_BASED
+  CONDITION_MET
+  EMAIL_RECEIVED
+  WEBHOOK
+}
+
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+enum WorkflowInstanceStatus {
+  RUNNING
+  COMPLETED
+  FAILED
+  CANCELLED
+  PAUSED
+}
+
+// Workflow Template - The blueprint for automation
+model WorkflowTemplate {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  category    String // e.g., "Document Approval", "Task Assignment", "Project Management"
+  companyId   String
+  createdBy   String
+  isActive    Boolean  @default(true)
+  isSystem    Boolean  @default(false) // System templates vs custom templates
+  version     Int      @default(1)
+  metadata    Json? // Additional configuration data
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  company   Company            @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  creator   User               @relation("WorkflowCreator", fields: [createdBy], references: [id])
+  steps     WorkflowStep[]
+  triggers  WorkflowTrigger[]
+  instances WorkflowInstance[]
+
+  @@index([companyId])
+  @@index([category])
+  @@map("workflow_templates")
+}
+
+// Individual steps in a workflow
+model WorkflowStep {
+  id             String           @id @default(cuid())
+  templateId     String
+  name           String
+  description    String?
+  stepType       WorkflowStepType
+  order          Int
+  configuration  Json // Step-specific configuration
+  conditions     Json? // Conditions for step execution
+  isRequired     Boolean          @default(true)
+  timeoutMinutes Int? // Optional timeout for step completion
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  // Relations
+  template     WorkflowTemplate         @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  executions   WorkflowExecution[]
+  dependencies WorkflowStepDependency[] @relation("DependentStep")
+  dependents   WorkflowStepDependency[] @relation("RequiredStep")
+
+  @@index([templateId])
+  @@index([order])
+  @@map("workflow_steps")
+}
+
+// Dependencies between workflow steps
+model WorkflowStepDependency {
+  id              String @id @default(cuid())
+  dependentStepId String
+  requiredStepId  String
+  conditionType   String @default("COMPLETION") // COMPLETION, APPROVAL, CUSTOM
+  conditionValue  Json?
+
+  // Relations
+  dependentStep WorkflowStep @relation("DependentStep", fields: [dependentStepId], references: [id], onDelete: Cascade)
+  requiredStep  WorkflowStep @relation("RequiredStep", fields: [requiredStepId], references: [id], onDelete: Cascade)
+
+  @@unique([dependentStepId, requiredStepId])
+  @@map("workflow_step_dependencies")
+}
+
+// Triggers that start workflow instances
+model WorkflowTrigger {
+  id            String              @id @default(cuid())
+  templateId    String
+  name          String
+  triggerType   WorkflowTriggerType
+  configuration Json // Trigger-specific configuration
+  isActive      Boolean             @default(true)
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+
+  // Relations
+  template WorkflowTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  @@index([templateId])
+  @@index([triggerType])
+  @@map("workflow_triggers")
+}
+
+// Running instance of a workflow
+model WorkflowInstance {
+  id           String                 @id @default(cuid())
+  templateId   String
+  status       WorkflowInstanceStatus @default(RUNNING)
+  triggeredBy  String?
+  contextData  Json? // Data context for this instance
+  startedAt    DateTime               @default(now())
+  completedAt  DateTime?
+  failedAt     DateTime?
+  errorMessage String?
+  metadata     Json?
+
+  // Relations
+  template   WorkflowTemplate    @relation(fields: [templateId], references: [id])
+  initiator  User?               @relation("WorkflowInitiator", fields: [triggeredBy], references: [id])
+  executions WorkflowExecution[]
+
+  @@index([templateId])
+  @@index([status])
+  @@index([startedAt])
+  @@map("workflow_instances")
+}
+
+// Execution of individual workflow steps
+model WorkflowExecution {
+  id           String                 @id @default(cuid())
+  instanceId   String
+  stepId       String
+  status       WorkflowInstanceStatus @default(RUNNING)
+  assignedTo   String?
+  startedAt    DateTime               @default(now())
+  completedAt  DateTime?
+  failedAt     DateTime?
+  output       Json? // Output data from step execution
+  errorMessage String?
+  retryCount   Int                    @default(0)
+  metadata     Json?
+
+  // Relations
+  instance  WorkflowInstance  @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+  step      WorkflowStep      @relation(fields: [stepId], references: [id])
+  assignee  User?             @relation("WorkflowAssignee", fields: [assignedTo], references: [id])
+  approvals ApprovalRequest[]
+
+  @@index([instanceId])
+  @@index([stepId])
+  @@index([status])
+  @@map("workflow_executions")
+}
+
+// Approval requests within workflows
+model ApprovalRequest {
+  id          String         @id @default(cuid())
+  executionId String
+  requestedBy String
+  approverIds String[] // Array of user IDs who can approve
+  title       String
+  description String?
+  status      ApprovalStatus @default(PENDING)
+  priority    String         @default("MEDIUM") // LOW, MEDIUM, HIGH, URGENT
+  dueDate     DateTime?
+  requestedAt DateTime       @default(now())
+  respondedAt DateTime?
+  respondedBy String?
+  response    String? // Approval/rejection reason
+  attachments Json? // File attachments or references
+  metadata    Json?
+
+  // Relations
+  execution WorkflowExecution @relation(fields: [executionId], references: [id], onDelete: Cascade)
+  requester User              @relation("ApprovalRequester", fields: [requestedBy], references: [id])
+  responder User?             @relation("ApprovalResponder", fields: [respondedBy], references: [id])
+
+  @@index([executionId])
+  @@index([status])
+  @@index([dueDate])
+  @@map("approval_requests")
+}
+
+// Auto-assignment rules for tasks and workflow steps
+model AssignmentRule {
+  id              String   @id @default(cuid())
+  companyId       String
+  name            String
+  description     String?
+  isActive        Boolean  @default(true)
+  conditions      Json // Conditions for when this rule applies
+  assignmentLogic Json // Logic for how to assign (round-robin, skills-based, etc.)
+  priority        Int      @default(100) // Higher number = higher priority
+  createdBy       String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relations
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  creator User    @relation("AssignmentRuleCreator", fields: [createdBy], references: [id])
+
+  @@index([companyId])
+  @@index([priority])
+  @@map("assignment_rules")
+}
+
+// Template library for common Nigerian business workflows
+model WorkflowTemplateLibrary {
+  id          String   @id @default(cuid())
+  name        String
+  description String
+  category    String
+  industry    String // e.g., "Banking", "Education", "Healthcare", "Government"
+  isPublic    Boolean  @default(true)
+  popularity  Int      @default(0)
+  template    Json // Complete workflow template definition
+  tags        String[] // Search tags
+  createdBy   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  creator User? @relation("LibraryTemplateCreator", fields: [createdBy], references: [id])
+
+  @@index([category])
+  @@index([industry])
+  @@index([popularity])
+  @@map("workflow_template_library")
+}
+
+// Workflow execution logs for monitoring and debugging
+model WorkflowLog {
+  id          String   @id @default(cuid())
+  instanceId  String?
+  executionId String?
+  level       String   @default("INFO") // DEBUG, INFO, WARN, ERROR
+  message     String
+  context     Json?
+  timestamp   DateTime @default(now())
+
+  @@index([instanceId])
+  @@index([executionId])
+  @@index([level])
+  @@index([timestamp])
+  @@map("workflow_logs")
+}
+
+// ================================
+// COMMUNICATION ENHANCEMENT SUITE
+// ================================
+
+// Email Integration Models
+enum EmailStatus {
+  DRAFT
+  QUEUED
+  SENDING
+  SENT
+  DELIVERED
+  FAILED
+  BOUNCED
+  OPENED
+  CLICKED
+}
+
+enum EmailTemplateType {
+  TRANSACTIONAL
+  MARKETING
+  NOTIFICATION
+  WORKFLOW
+  SYSTEM
+}
+
+enum EmailPriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
+model EmailTemplate {
+  id          String            @id @default(cuid())
+  name        String
+  subject     String
+  htmlContent String            @db.Text
+  textContent String?           @db.Text
+  type        EmailTemplateType
+  isActive    Boolean           @default(true)
+  companyId   String
+  createdBy   String
+  variables   Json? // Template variables and their types
+  metadata    Json? // Additional template configuration
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  // Relations
+  company Company    @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  creator User       @relation("EmailTemplateCreator", fields: [createdBy], references: [id])
+  emails  EmailLog[]
+
+  @@index([companyId])
+  @@index([type])
+  @@map("email_templates")
+}
+
+model EmailLog {
+  id             String        @id @default(cuid())
+  templateId     String?
+  companyId      String
+  senderId       String
+  recipientEmail String
+  recipientName  String?
+  subject        String
+  htmlContent    String        @db.Text
+  textContent    String?       @db.Text
+  status         EmailStatus   @default(QUEUED)
+  priority       EmailPriority @default(NORMAL)
+  scheduledAt    DateTime?
+  sentAt         DateTime?
+  deliveredAt    DateTime?
+  openedAt       DateTime?
+  clickedAt      DateTime?
+  failedAt       DateTime?
+  errorMessage   String?
+  trackingId     String?       @unique
+  metadata       Json? // Additional email data
+  attachments    Json? // File attachments information
+  createdAt      DateTime      @default(now())
+
+  // Relations
+  template EmailTemplate? @relation(fields: [templateId], references: [id])
+  company  Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  sender   User           @relation("EmailSender", fields: [senderId], references: [id])
+
+  @@index([companyId])
+  @@index([status])
+  @@index([scheduledAt])
+  @@index([recipientEmail])
+  @@index([trackingId])
+  @@map("email_logs")
+}
+
+// Video & Voice Communication Models
+enum CallStatus {
+  INITIATED
+  RINGING
+  CONNECTED
+  DISCONNECTED
+  FAILED
+  MISSED
+  REJECTED
+}
+
+enum CallType {
+  AUDIO
+  VIDEO
+  SCREEN_SHARE
+}
+
+model VideoCall {
+  id             String     @id @default(cuid())
+  initiatorId    String
+  participantIds String[] // Array of participant user IDs
+  roomId         String     @unique
+  type           CallType   @default(VIDEO)
+  status         CallStatus @default(INITIATED)
+  scheduledAt    DateTime?
+  startedAt      DateTime?
+  endedAt        DateTime?
+  duration       Int? // Duration in seconds
+  recordingUrl   String?
+  metadata       Json? // Call settings, quality metrics, etc.
+  companyId      String
+  createdAt      DateTime   @default(now())
+
+  // Relations
+  company    Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  initiator  User            @relation("CallInitiator", fields: [initiatorId], references: [id])
+  recordings CallRecording[]
+
+  @@index([companyId])
+  @@index([initiatorId])
+  @@index([status])
+  @@index([scheduledAt])
+  @@map("video_calls")
+}
+
+model CallRecording {
+  id         String    @id @default(cuid())
+  callId     String
+  fileName   String
+  fileUrl    String
+  fileSize   Int
+  mimeType   String
+  duration   Int? // Duration in seconds
+  startTime  DateTime
+  endTime    DateTime?
+  recordedBy String
+  metadata   Json?
+  createdAt  DateTime  @default(now())
+
+  // Relations
+  call     VideoCall @relation(fields: [callId], references: [id], onDelete: Cascade)
+  recorder User      @relation("CallRecorder", fields: [recordedBy], references: [id])
+
+  @@index([callId])
+  @@map("call_recordings")
+}
+
+model VoiceMessage {
+  id            String        @id @default(cuid())
+  senderId      String
+  recipientId   String?
+  groupId       String?
+  fileName      String
+  fileUrl       String
+  fileSize      Int
+  duration      Int // Duration in seconds
+  mimeType      String        @default("audio/mp3")
+  status        MessageStatus @default(SENT)
+  transcription String?       @db.Text // Auto-generated transcription
+  isListened    Boolean       @default(false)
+  listenedAt    DateTime?
+  isUrgent      Boolean       @default(false)
+  companyId     String
+  metadata      Json?
+  createdAt     DateTime      @default(now())
+
+  // Relations
+  company   Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  sender    User          @relation("VoiceMessageSender", fields: [senderId], references: [id])
+  recipient User?         @relation("VoiceMessageRecipient", fields: [recipientId], references: [id])
+  group     MessageGroup? @relation(fields: [groupId], references: [id])
+
+  @@index([companyId])
+  @@index([senderId])
+  @@index([recipientId])
+  @@index([groupId])
+  @@index([createdAt])
+  @@map("voice_messages")
+}
+
+// Screen Sharing & Collaboration Models
+enum ScreenShareStatus {
+  ACTIVE
+  PAUSED
+  ENDED
+  FAILED
+}
+
+model ScreenShareSession {
+  id              String            @id @default(cuid())
+  hostId          String
+  participantIds  String[] // Array of participant user IDs
+  sessionId       String            @unique
+  title           String?
+  description     String?
+  status          ScreenShareStatus @default(ACTIVE)
+  startedAt       DateTime          @default(now())
+  endedAt         DateTime?
+  duration        Int? // Duration in seconds
+  recordingUrl    String?
+  isRecording     Boolean           @default(false)
+  maxParticipants Int               @default(50)
+  companyId       String
+  metadata        Json? // Session settings, quality, etc.
+
+  // Relations
+  company      Company                  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  host         User                     @relation("ScreenShareHost", fields: [hostId], references: [id])
+  interactions ScreenShareInteraction[]
+
+  @@index([companyId])
+  @@index([hostId])
+  @@index([status])
+  @@index([startedAt])
+  @@map("screen_share_sessions")
+}
+
+model ScreenShareInteraction {
+  id        String   @id @default(cuid())
+  sessionId String
+  userId    String
+  action    String // 'join', 'leave', 'annotation', 'cursor_move', etc.
+  data      Json? // Action-specific data
+  timestamp DateTime @default(now())
+
+  // Relations
+  session ScreenShareSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  user    User               @relation("ScreenShareUser", fields: [userId], references: [id])
+
+  @@index([sessionId])
+  @@index([userId])
+  @@index([timestamp])
+  @@map("screen_share_interactions")
+}
+
+// Collaborative Editing Models
+enum DocumentType {
+  TEXT
+  SPREADSHEET
+  PRESENTATION
+  DIAGRAM
+  WHITEBOARD
+}
+
+enum CollaborationPermission {
+  VIEW
+  COMMENT
+  EDIT
+  ADMIN
+}
+
+model CollaborativeDocument {
+  id           String       @id @default(cuid())
+  title        String
+  content      String       @db.Text
+  type         DocumentType @default(TEXT)
+  version      Int          @default(1)
+  isLocked     Boolean      @default(false)
+  lockedBy     String?
+  lockedAt     DateTime?
+  companyId    String
+  createdBy    String
+  lastEditedBy String?
+  lastEditedAt DateTime?
+  metadata     Json? // Document settings, formatting, etc.
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  // Relations
+  company        Company                 @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  creator        User                    @relation("DocumentCreator", fields: [createdBy], references: [id])
+  lastEditor     User?                   @relation("DocumentEditor", fields: [lastEditedBy], references: [id])
+  locker         User?                   @relation("DocumentLocker", fields: [lockedBy], references: [id])
+  permissions    DocumentPermission[]
+  versions       DocumentVersion[]
+  collaborations DocumentCollaboration[]
+
+  @@index([companyId])
+  @@index([createdBy])
+  @@index([type])
+  @@index([updatedAt])
+  @@map("collaborative_documents")
+}
+
+model DocumentPermission {
+  id         String                  @id @default(cuid())
+  documentId String
+  userId     String?
+  groupId    String?
+  permission CollaborationPermission
+  grantedBy  String
+  grantedAt  DateTime                @default(now())
+  expiresAt  DateTime?
+
+  // Relations
+  document CollaborativeDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  user     User?                 @relation("DocumentPermissionUser", fields: [userId], references: [id])
+  group    MessageGroup?         @relation(fields: [groupId], references: [id])
+  grantor  User                  @relation("DocumentPermissionGrantor", fields: [grantedBy], references: [id])
+
+  @@unique([documentId, userId])
+  @@unique([documentId, groupId])
+  @@index([documentId])
+  @@index([userId])
+  @@map("document_permissions")
+}
+
+model DocumentVersion {
+  id         String   @id @default(cuid())
+  documentId String
+  version    Int
+  content    String   @db.Text
+  changes    Json? // Delta/diff of changes
+  createdBy  String
+  createdAt  DateTime @default(now())
+  summary    String? // Version summary/comment
+
+  // Relations
+  document CollaborativeDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  creator  User                  @relation("DocumentVersionCreator", fields: [createdBy], references: [id])
+
+  @@unique([documentId, version])
+  @@index([documentId])
+  @@index([createdAt])
+  @@map("document_versions")
+}
+
+model DocumentCollaboration {
+  id         String   @id @default(cuid())
+  documentId String
+  userId     String
+  action     String // 'view', 'edit', 'comment', 'cursor_position', etc.
+  data       Json? // Action-specific data (cursor position, selection, etc.)
+  timestamp  DateTime @default(now())
+
+  // Relations
+  document CollaborativeDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  user     User                  @relation("DocumentCollaborator", fields: [userId], references: [id])
+
+  @@index([documentId])
+  @@index([userId])
+  @@index([timestamp])
+  @@map("document_collaborations")
+}
+
+// File Sharing & Storage Models
+enum FileCategory {
+  DOCUMENT
+  IMAGE
+  VIDEO
+  AUDIO
+  ARCHIVE
+  OTHER
+}
+
+model SharedFile {
+  id            String       @id @default(cuid())
+  fileName      String
+  originalName  String
+  fileUrl       String
+  fileSize      Int
+  mimeType      String
+  category      FileCategory
+  description   String?
+  isPublic      Boolean      @default(false)
+  downloadCount Int          @default(0)
+  uploadedBy    String
+  companyId     String
+  expiresAt     DateTime?
+  metadata      Json? // File metadata, EXIF data, etc.
+  createdAt     DateTime     @default(now())
+
+  // Relations
+  company  Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  uploader User         @relation("FileUploader", fields: [uploadedBy], references: [id])
+  accesses FileAccess[]
+
+  @@index([companyId])
+  @@index([uploadedBy])
+  @@index([category])
+  @@index([createdAt])
+  @@map("shared_files")
+}
+
+model FileAccess {
+  id         String   @id @default(cuid())
+  fileId     String
+  userId     String?
+  ipAddress  String?
+  userAgent  String?
+  accessedAt DateTime @default(now())
+  action     String   @default("download") // 'view', 'download', 'share'
+
+  // Relations
+  file SharedFile @relation(fields: [fileId], references: [id], onDelete: Cascade)
+  user User?      @relation("FileAccessUser", fields: [userId], references: [id])
+
+  @@index([fileId])
+  @@index([userId])
+  @@index([accessedAt])
+  @@map("file_accesses")
 }

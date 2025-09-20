@@ -5,6 +5,11 @@ import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/layout/ProtectedRoute';
 import Login from './pages/Login';
 import Dashboard from './components/dashboard/Dashboard';
+import Companies from './components/companies/Companies';
+import Revenue from './components/revenue/Revenue';
+import Plans from './components/plans/Plans';
+import Settings from './components/settings/Settings';
+import Profile from './components/profile/Profile';
 
 function App() {
   return (
@@ -24,37 +29,33 @@ function App() {
               </ProtectedRoute>
             } />
             
-            {/* Placeholder routes for future implementation */}
-            <Route path="/revenue" element={
+            <Route path="/companies" element={
               <ProtectedRoute>
-                <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-                  <div className="text-center">
-                    <h1 className="text-3xl font-bold text-gray-900">Revenue Analytics</h1>
-                    <p className="mt-4 text-gray-600">Coming soon...</p>
-                  </div>
-                </div>
+                <Companies />
               </ProtectedRoute>
             } />
             
-            <Route path="/companies" element={
+            <Route path="/revenue" element={
               <ProtectedRoute>
-                <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-                  <div className="text-center">
-                    <h1 className="text-3xl font-bold text-gray-900">Company Management</h1>
-                    <p className="mt-4 text-gray-600">Coming soon...</p>
-                  </div>
-                </div>
+                <Revenue />
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/plans" element={
+              <ProtectedRoute>
+                <Plans />
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/settings" element={
+              <ProtectedRoute>
+                <Settings />
               </ProtectedRoute>
             } />
             
             <Route path="/profile" element={
               <ProtectedRoute>
-                <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-                  <div className="text-center">
-                    <h1 className="text-3xl font-bold text-gray-900">Profile Settings</h1>
-                    <p className="mt-4 text-gray-600">Coming soon...</p>
-                  </div>
-                </div>
+                <Profile />
               </ProtectedRoute>
             } />
             

@@ -14,6 +14,42 @@ const handleValidation = (req, res, next) => {
   next();
 };
 
+// GET /api/notifications - get user notifications
+router.get(
+  '/',
+  authenticateToken,
+  query('limit').optional().isInt({ min: 1, max: 100 }),
+  handleValidation,
+  async (req, res) => {
+    try {
+      const me = req.user;
+      const limit = parseInt(req.query.limit) || 10;
+
+      const notifications = await prisma.notification.findMany({
+        where: { userId: me.id },
+        orderBy: { createdAt: 'desc' },
+        take: limit,
+        select: {
+          id: true,
+          title: true,
+          message: true,
+          type: true,
+          read: true,
+          createdAt: true
+        }
+      });
+
+      res.json({
+        success: true,
+        data: notifications
+      });
+    } catch (error) {
+      console.error('Error fetching notifications:', error);
+      res.status(500).json({ error: 'Failed to fetch notifications' });
+    }
+  }
+);
+
 // GET /api/notifications/settings - get user notification settings
 router.get(
   '/settings',
